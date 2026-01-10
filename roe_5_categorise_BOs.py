@@ -328,7 +328,7 @@ def is_uk_a_fuzzy_match(country, threshold=85):
     """Determine if a country string is considered UK by fuzzy matching."""
     normalised = country.lower().replace("registered in", "").strip()
     uk_terms = [
-        "uk", "england", "scotland", "wales", "northern ireland", "united kingdom",
+        "uk", "england", "english", "scotland", "wales", "northern ireland", "united kingdom",
         "england and wales", "england & wales", "united kingdom (england and wales)",
         "uk and wales", "united kingdom england", "u.k", "england, uk",
         "scotland united kingdom", "gbeng", "gbsct", "great britain", "united kingdom (scotland)", "london",
@@ -440,8 +440,10 @@ def process_bo_status(row: sqlite3.Row | Dict[str, Any]):
                             legal_form = json.loads(legal_form_str)
                             authority = legal_form.get("legal_authority", "")
                             country_registered = legal_form.get("country_registered", "")
+                            place_registered = legal_form.get("place_registered", "")
                             if (authority and is_uk_a_fuzzy_match(authority)) or \
-                               (country_registered and is_uk_a_fuzzy_match(country_registered)):
+                               (country_registered and is_uk_a_fuzzy_match(country_registered)) or \
+                               (place_registered and is_uk_a_fuzzy_match(place_registered)):
                                 in_uk = True
                         except json.JSONDecodeError:
                             pass
