@@ -172,6 +172,7 @@ let focusModeState = {
 };
 
 let topValuableProperties = [];
+const TOP_VALUABLE_PROPERTIES_LIMIT = 10000; // Cap for overall list; sanctioned properties are added separately.
 
 // infobox tooltip stuff
 let controlTypesMap = {}; // Will hold the control code -> icon/description mapping
@@ -254,7 +255,7 @@ function expandShortSchemaIfNeeded(data) {
             lon: isNaN(plon) ? null : plon,
             BOs: bos,
             country_incorporated: sp.ci,
-            ch_number: sp.ch,
+            ch_number: sp.ch ?? sp.ch_number,
             count: (typeof sp.c === 'string') ? parseInt(sp.c, 10) : sp.c,
             wrong_address: sp.wa,
             BO_failure: sp.bf,
@@ -339,7 +340,7 @@ function expandProprietorsDictShortToLong(data) {
             lon: sp.lon,
             BOs: bos,
             country_incorporated: sp.ci,
-            ch_number: sp.ch,
+            ch_number: sp.ch ?? sp.ch_number,
             count: sp.c,
             wrong_address: sp.wa,
             BO_failure: sp.bf,
@@ -683,9 +684,11 @@ function createOwnershipCountBadge(name, role, count) {
 
 
 function createFlyThereIcon(lat, lon, title, propertyTitleNumber, markerId, categoryForColor = null, zoomLevel = null) {
-    if (!lat || !lon) return '';
+    const latNum = Number(lat);
+    const lonNum = Number(lon);
+    if (!Number.isFinite(latNum) || !Number.isFinite(lonNum)) return '';
 
-    const safeTitle = title.replace(/'/g, "\\'");
+    const safeTitle = escapeJsString(title);
     // Determine the highlight color: prefer an explicit category/status if provided; otherwise fall back
     // to the previous behavior (deriving via getMarkerColor on the title, which defaults to green).
     const color = categoryForColor
@@ -698,8 +701,8 @@ function createFlyThereIcon(lat, lon, title, propertyTitleNumber, markerId, cate
             data-tooltip-infopanel="Fly to location"
             aria-label="Fly to location"
             onclick="panToLocation(
-                ${lat},
-                ${lon},
+                ${latNum},
+                ${lonNum},
                 '${color}',
                 '${safeTitle}',
                 event,
@@ -726,7 +729,7 @@ function createGoogleSearchIcon(name) {
         return '';
     }
 
-    const encodedName = encodeURIComponent(name);
+    const encodedName = encodeURIComponent(`"${name}"`);
     const googleSearchUrl = `https://www.google.com/search?q=${encodedName}`;
     
     const tooltipText = `Google search`;
@@ -930,7 +933,12 @@ function ensureMarkerLayerIsVisible(marker) {
 function prepareValuablePropertiesData() {
     const valuable = allPropertiesData.filter(p => p.price_paid);
     valuable.sort((a, b) => b.price_paid - a.price_paid);
-    topValuableProperties = valuable.slice(0, 10000);
+    const capped = valuable.slice(0, TOP_VALUABLE_PROPERTIES_LIMIT);
+    const sanctioned = valuable.filter(p => getMarkerColor(p.status) === 'purple');
+    const combined = new Map();
+    capped.forEach(p => combined.set(p.property_title_number, p));
+    sanctioned.forEach(p => combined.set(p.property_title_number, p));
+    topValuableProperties = Array.from(combined.values());
 }
 
 /**
@@ -1026,6 +1034,29 @@ function capitalizeFirstLetter(str) {
   return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
+function escapeHtml(value) {
+    if (value === null || value === undefined) return '';
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function escapeHtmlAttribute(value) {
+    return escapeHtml(value);
+}
+
+function escapeJsString(value) {
+    if (value === null || value === undefined) return '';
+    return String(value)
+        .replace(/\\/g, '\\\\')
+        .replace(/'/g, "\\'")
+        .replace(/\r/g, '\\r')
+        .replace(/\n/g, '\\n');
+}
+
 
 function getMarkerColor(status) {
     // Normalise status strings and map them to a colour category used by
@@ -1063,6 +1094,21 @@ function formatNumber(num) {
     if (num === null || num === undefined || num === "") return "";
     const numStr = String(num);
     return numStr.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+}
+
+function formatPriceShort(num) {
+    if (num === null || num === undefined || num === "") return "";
+    const value = Number(num);
+    if (!Number.isFinite(value)) return "";
+    const absValue = Math.abs(value);
+    if (absValue >= 1000000) {
+        const millions = value / 1000000;
+        const decimals = absValue < 10000000 ? 1 : 0;
+        const rounded = millions.toFixed(decimals).replace(/\.0$/, "");
+        const withCommas = rounded.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        return `${withCommas}m`;
+    }
+    return formatNumber(value);
 }
 
 // Format a date string of the form DD-MM-YYYY into "D Month YYYY"
@@ -1507,6 +1553,118 @@ function initializeApp() {
                             // All done — set to 100% and fade out overlay
                             bytesOwners = Math.max(0, totalBytes - bytesProps); // force 100% if sizes differ slightly
                             updateProgress('Done');
+                            
+                            // --- make sure we start in the correct mode ---
+                            // During initial startup, do not let this default overwrite URL params
+                            // (e.g., preserve ?mode=beneficial_owners on refresh)
+                            suppressUrlUpdates = true;
+                            const initialParams = new URLSearchParams(window.location.search);
+                            const hasAnyStateParam = initialParams.has('s') || initialParams.has('location') || initialParams.has('mode') || initialParams.has('layers') || initialParams.has('popup');
+                            const hasModeOrLayersParam = initialParams.has('s') || initialParams.has('mode') || initialParams.has('layers');
+
+                            if (!hasModeOrLayersParam) {
+                                // No explicit mode/layers → set initial mode so map isn't empty
+                                switchMode('properties');
+                            }
+
+                            if (!hasAnyStateParam) {
+                                // No URL state at all → apply startup legend defaults
+                                map.removeLayer(modeLayers.properties.green);
+                                map.removeLayer(modeLayers.properties.blue);
+                                map.removeLayer(modeLayers.properties.orange);
+
+                                document.querySelectorAll('.legend-item[data-category="green"], .legend-item[data-category="orange"], .legend-item[data-category="blue"]').forEach(item => {
+                                    item.setAttribute("data-active", "false");
+                                    item.classList.add("inactive");
+                                    item.querySelector(".legend-box")?.classList.add("inactive");
+                                });
+                            }
+                            
+                            // Keep overlay until proprietors finish downloading
+                            // Restore infobox history from cookie (if any)
+                            loadInfoHistoryFromCookie();
+                            updateInfoBarButtons();
+
+                            tutorialDataReady = true;
+                            
+                            const params = new URLSearchParams(window.location.search);
+                            const locationParam = params.get('location');
+                            
+                            // 1. Check for the 'location' parameter first
+                            if (locationParam) {
+                                setTimeout(() => {
+                                    const parts = locationParam.split(',');
+                                    if (parts.length === 3) {
+                                        const lat = parseFloat(parts[0]);
+                                        const lon = parseFloat(parts[1]);
+                                        const zoom = parseInt(parts[2], 10);
+
+                                        // Set the map view if the values are valid numbers
+                                        if (!isNaN(lat) && !isNaN(lon) && !isNaN(zoom)) {
+                                            map.setView([lat, lon], zoom);
+                                        }
+                                    }
+
+                                    // Also restore mode, layers, and popup if provided
+                                    const modeParam = params.get('mode');
+                                    if (modeParam && modeLayers[modeParam]) {
+                                        // update UI active class
+                                        document.querySelectorAll('.mode-toggle-btn.active')
+                                                .forEach(btn => btn.classList.remove('active'));
+                                        const btn = document.querySelector(`.mode-toggle-btn[data-value="${modeParam}"]`);
+                                        if (btn) btn.classList.add('active');
+                                        switchMode(modeParam, true);
+                                    }
+
+                                    const layersParam = params.get('layers');
+                                    if (layersParam) {
+                                        const activeSet = new Set(layersParam.split(',').map(s=>s.trim()).filter(Boolean));
+                                        // Toggle layers to match
+                                        Object.keys(modeLayers[currentMode]).forEach(cat => {
+                                            const layer = modeLayers[currentMode][cat];
+                                            const shouldBeActive = activeSet.has(cat);
+                                            if (shouldBeActive) {
+                                                if (!map.hasLayer(layer)) map.addLayer(layer);
+                                            } else {
+                                                if (map.hasLayer(layer)) map.removeLayer(layer);
+                                            }
+                                            const legendItem = document.querySelector(`.legend-item[data-category="${cat}"]`);
+                                            if (legendItem) {
+                                                legendItem.setAttribute('data-active', shouldBeActive ? 'true' : 'false');
+                                                legendItem.classList.toggle('inactive', !shouldBeActive);
+                                                legendItem.querySelector('.legend-box')?.classList.toggle('inactive', !shouldBeActive);
+                                            }
+                                        });
+                                    }
+
+                                    const popupParam = params.get('popup');
+                                    if (popupParam) {
+                                        const m = findMarkerByTitleNumber(popupParam);
+                                        if (m) {
+                                            const pt = map.latLngToContainerPoint(m.getLatLng());
+                                            showInfoPanel(m.propertyItem, m.myId, pt);
+                                        }
+                                    }
+
+                                    // Re-enable URL updates after applying initial URL state
+                                    suppressUrlUpdates = false;
+                                }, 500);
+
+                            // 2. Fall back to the existing 's' parameter
+                            } else if (params.has("s")) {
+                                applyUrlParameters();
+                                // Sharing links should not be mutated, but resume URL updates for user actions
+                                suppressUrlUpdates = false;
+                            } else if (tutorialPending) {
+                                tutorialDataReady = true;
+                                maybeStartTutorial();
+                                // Resume URL updates even if tutorial start is deferred
+                                suppressUrlUpdates = false;
+                            } else {
+                                // No URL state to apply; resume URL updates after defaults
+                                suppressUrlUpdates = false;
+                            }
+
                             $('#loading-overlay').fadeOut();
                         },
                         error: function() {
@@ -1514,117 +1672,6 @@ function initializeApp() {
                             $('#loading-overlay').fadeOut();
                         }
                     });
-
-                    // --- make sure we start in the correct mode ---
-                    // During initial startup, do not let this default overwrite URL params
-                    // (e.g., preserve ?mode=beneficial_owners on refresh)
-                    suppressUrlUpdates = true;
-                    const initialParams = new URLSearchParams(window.location.search);
-                    const hasAnyStateParam = initialParams.has('s') || initialParams.has('location') || initialParams.has('mode') || initialParams.has('layers') || initialParams.has('popup');
-                    const hasModeOrLayersParam = initialParams.has('s') || initialParams.has('mode') || initialParams.has('layers');
-
-                    if (!hasModeOrLayersParam) {
-                        // No explicit mode/layers → set initial mode so map isn't empty
-                        switchMode('properties');
-                    }
-
-                    if (!hasAnyStateParam) {
-                        // No URL state at all → apply startup legend defaults
-                        map.removeLayer(modeLayers.properties.green);
-                        map.removeLayer(modeLayers.properties.blue);
-                        map.removeLayer(modeLayers.properties.orange);
-
-                        document.querySelectorAll('.legend-item[data-category="green"], .legend-item[data-category="orange"], .legend-item[data-category="blue"]').forEach(item => {
-                            item.setAttribute("data-active", "false");
-                            item.classList.add("inactive");
-                            item.querySelector(".legend-box")?.classList.add("inactive");
-                        });
-                    }
-                    
-                    // Keep overlay until proprietors finish downloading
-                    // Restore infobox history from cookie (if any)
-                    loadInfoHistoryFromCookie();
-                    updateInfoBarButtons();
-
-                    tutorialDataReady = true;
-                    
-                    const params = new URLSearchParams(window.location.search);
-                    const locationParam = params.get('location');
-                    
-                    // 1. Check for the 'location' parameter first
-                    if (locationParam) {
-                        setTimeout(() => {
-                            const parts = locationParam.split(',');
-                            if (parts.length === 3) {
-                                const lat = parseFloat(parts[0]);
-                                const lon = parseFloat(parts[1]);
-                                const zoom = parseInt(parts[2], 10);
-
-                                // Set the map view if the values are valid numbers
-                                if (!isNaN(lat) && !isNaN(lon) && !isNaN(zoom)) {
-                                    map.setView([lat, lon], zoom);
-                                }
-                            }
-
-                            // Also restore mode, layers, and popup if provided
-                            const modeParam = params.get('mode');
-                            if (modeParam && modeLayers[modeParam]) {
-                                // update UI active class
-                                document.querySelectorAll('.mode-toggle-btn.active')
-                                        .forEach(btn => btn.classList.remove('active'));
-                                const btn = document.querySelector(`.mode-toggle-btn[data-value="${modeParam}"]`);
-                                if (btn) btn.classList.add('active');
-                                switchMode(modeParam, true);
-                            }
-
-                            const layersParam = params.get('layers');
-                            if (layersParam) {
-                                const activeSet = new Set(layersParam.split(',').map(s=>s.trim()).filter(Boolean));
-                                // Toggle layers to match
-                                Object.keys(modeLayers[currentMode]).forEach(cat => {
-                                    const layer = modeLayers[currentMode][cat];
-                                    const shouldBeActive = activeSet.has(cat);
-                                    if (shouldBeActive) {
-                                        if (!map.hasLayer(layer)) map.addLayer(layer);
-                                    } else {
-                                        if (map.hasLayer(layer)) map.removeLayer(layer);
-                                    }
-                                    const legendItem = document.querySelector(`.legend-item[data-category="${cat}"]`);
-                                    if (legendItem) {
-                                        legendItem.setAttribute('data-active', shouldBeActive ? 'true' : 'false');
-                                        legendItem.classList.toggle('inactive', !shouldBeActive);
-                                        legendItem.querySelector('.legend-box')?.classList.toggle('inactive', !shouldBeActive);
-                                    }
-                                });
-                            }
-
-                            const popupParam = params.get('popup');
-                            if (popupParam) {
-                                const m = findMarkerByTitleNumber(popupParam);
-                                if (m) {
-                                    const pt = map.latLngToContainerPoint(m.getLatLng());
-                                    showInfoPanel(m.propertyItem, m.myId, pt);
-                                }
-                            }
-
-                            // Re-enable URL updates after applying initial URL state
-                            suppressUrlUpdates = false;
-                        }, 500);
-
-                    // 2. Fall back to the existing 's' parameter
-                    } else if (params.has("s")) {
-                        applyUrlParameters();
-                        // Sharing links should not be mutated, but resume URL updates for user actions
-                        suppressUrlUpdates = false;
-                    } else if (tutorialPending) {
-                        tutorialDataReady = true;
-                        maybeStartTutorial();
-                        // Resume URL updates even if tutorial start is deferred
-                        suppressUrlUpdates = false;
-                    } else {
-                        // No URL state to apply; resume URL updates after defaults
-                        suppressUrlUpdates = false;
-                    }
                 }, 50); // A 50ms delay is enough for the UI to update.
             },
             error: function(err) {
@@ -1764,8 +1811,10 @@ function buildAllMarkers() {
             allMarkersById[uniqueId] = marker;
             return marker;
         };
-        if (item.lat && item.lon) {
-            const propMarker = createMarker(item.lat, item.lon, item.property_title_number, item);
+        const lat = Number(item.lat);
+        const lon = Number(item.lon);
+        if (Number.isFinite(lat) && Number.isFinite(lon)) {
+            const propMarker = createMarker(lat, lon, item.property_title_number, item);
             modeLayers.properties[category].addLayer(propMarker);
         }
 
@@ -1848,8 +1897,10 @@ function buildPropertyMarkers() {
         if (!item.property_title_number) continue;
         const category = getMarkerColor(item.status);
         const displayColor = categoryColours[category] || category;
-        if (item.lat && item.lon) {
-            const propMarker = createMarker(item.lat, item.lon, item.property_title_number, item, displayColor, category);
+        const lat = Number(item.lat);
+        const lon = Number(item.lon);
+        if (Number.isFinite(lat) && Number.isFinite(lon)) {
+            const propMarker = createMarker(lat, lon, item.property_title_number, item, displayColor, category);
             modeLayers.properties[category].addLayer(propMarker);
         }
     }
@@ -1899,14 +1950,18 @@ function buildOwnerMarkers() {
         const displayColor = categoryColours[category] || category;
         if (!item.props) continue;
         item.props.forEach(prop => {
-            if (prop.lat && prop.lon) {
-                const pMarker = createMarker(prop.lat, prop.lon, prop.name, prop, displayColor, category, item);
+            const propLat = Number(prop.lat);
+            const propLon = Number(prop.lon);
+            if (Number.isFinite(propLat) && Number.isFinite(propLon)) {
+                const pMarker = createMarker(propLat, propLon, prop.name, prop, displayColor, category, item);
                 modeLayers.proprietors[category].addLayer(pMarker);
             }
             if (prop.BOs) {
                 prop.BOs.forEach(bo => {
-                    if (bo.lat && bo.lon) {
-                        const boMarker = createMarker(bo.lat, bo.lon, bo.name, bo, displayColor, category, item);
+                    const boLat = Number(bo.lat);
+                    const boLon = Number(bo.lon);
+                    if (Number.isFinite(boLat) && Number.isFinite(boLon)) {
+                        const boMarker = createMarker(boLat, boLon, bo.name, bo, displayColor, category, item);
                         modeLayers.beneficial_owners[category].addLayer(boMarker);
                     }
                 });
@@ -2298,12 +2353,16 @@ window.addEventListener("load", function() {
         }
 
         // Build the state object
+        const popupTitle = currentPanelPropertyTitle
+            || (activeMarker && activeMarker.propertyItem
+                ? activeMarker.propertyItem.property_title_number
+                : null);
         const state = {
             lat: center.lat.toFixed(6),
             lng: center.lng.toFixed(6),
             zoom: zoom,
             mode: currentMode, // record the current display mode
-            popup: activeMarker ? activeMarker.propertyItem.property_title_number : null,
+            popup: popupTitle,
     // Store the unique IDs of items with links (up to the limit)
             links: linkedItemIds.slice(0, maxSharedLinks),
             // Store layer visibility state
@@ -2891,7 +2950,7 @@ function showInfoPanel(propertyItem, markerId, point, fromHistory = false) {
             const mapSize = map.getSize();
             const padding = 15;
             const mapControls = document.getElementById('mapControls');
-            const controlsWidth = mapControls.offsetWidth;
+            const controlsWidth = mapControls ? mapControls.offsetWidth : 0;
 
             let newLeft = point.x + padding;
             let newTop = point.y - panelHeight / 2;
@@ -2899,8 +2958,13 @@ function showInfoPanel(propertyItem, markerId, point, fromHistory = false) {
             if (newLeft + panelWidth + padding > mapSize.x) {
                 newLeft = point.x - panelWidth - padding;
             }
-            if (newLeft < controlsWidth + padding) {
-                newLeft = controlsWidth + padding;
+            const minLeft = controlsWidth + padding;
+            const maxLeft = mapSize.x - panelWidth - padding;
+            if (newLeft < minLeft) {
+                newLeft = minLeft;
+            }
+            if (newLeft > maxLeft) {
+                newLeft = maxLeft;
             }
             if (newTop < padding) {
                 newTop = padding;
@@ -3030,7 +3094,7 @@ function generatePanelHtml(propertyItem, markerId) {
     const category = getMarkerColor(propertyItem.status);
     const displayColor = categoryColours[category] || 'gray';
     const categoryTooltipText = categoryTooltips[category] || 'Property status';
-    const statusCircleHtml = `<span class="status-circle-indicator" style="color: ${displayColor};" data-tooltip-infopanel="${categoryTooltipText}">⬤</span>`;
+    const statusCircleHtml = `<span class="status-circle-indicator" style="color: ${displayColor};" data-tooltip-infopanel="${escapeHtmlAttribute(categoryTooltipText)}">⬤</span>`;
         
 
     html += `
@@ -3041,7 +3105,7 @@ function generatePanelHtml(propertyItem, markerId) {
                     ${statusCircleHtml} 
                     <span class="copyable-text" onclick="copyTextOnClick(event)" data-copy-text='${escAttrSingle(propertyItem.property_uk_address || "No address")}'
                           data-tooltip-infopanel='${escAttrSingle(`"${propertyItem.property_uk_address || 'No address'}": copy to clipboard`)}'>
-                        ${truncate(capitalizeFirstLetter(propertyItem.property_uk_address), 90)}
+                        ${escapeHtml(truncate(capitalizeFirstLetter(propertyItem.property_uk_address), 90))}
                     </span>
                         <div id="property-icons"> 
                             ${mapIconHtml}
@@ -3073,7 +3137,7 @@ function generatePanelHtml(propertyItem, markerId) {
                         style="background: #1133AF; color: white; border: 1px solid #ccc; border-radius: 5px; padding: 5px 10px; cursor: pointer; position: static; box-shadow: none; text-align: left; font-size: 1em;">
                     <i class="material-symbols-outlined" style="vertical-align: middle; font-size: 18px;" aria-hidden="true">link</i>
                     <span style="vertical-align: middle; margin-left: 8px; font-weight: 400; font-size: 1em;">
-                        Draw ownership link${connectionCount !== 1 ? 's' : ''}
+                        Draw ownership chain
                     </span>
                 </button>
             </div>
@@ -3115,7 +3179,7 @@ function generatePanelHtml(propertyItem, markerId) {
                     if (prop.country_incorporated) {
                         badgeText += ` - should be ${toTitleCase(prop.country_incorporated)}`;
                     }
-                    proprietorBadges += `<div class="status-badge status-red">${badgeText}</div>`;
+                    proprietorBadges += `<div class="status-badge status-red">${escapeHtml(badgeText)}</div>`;
                 }
             }
             // Determine the correct proprietor label based on the count
@@ -3140,7 +3204,7 @@ function generatePanelHtml(propertyItem, markerId) {
                     <div class="entity-title">
                         <b>${proprietorLabel}:</b>
                         <span class="entity-name">
-                                <span class="copyable-text" onclick="copyTextOnClick(event)" data-tooltip-infopanel="Click to copy name">${prop.name}</span>
+                                <span class="copyable-text" onclick="copyTextOnClick(event)" data-tooltip-infopanel="Click to copy name">${escapeHtml(prop.name)}</span>
                                 ${proprietorCountBadge} 
                                 ${createCompaniesHouseSearchIcon(prop.name, prop.ch_number)}
                                 ${proprietorMapIcon}
@@ -3148,7 +3212,7 @@ function generatePanelHtml(propertyItem, markerId) {
                                 ${proprietorgoogleMapIcon}
                         </span>
                     </div>
-                    <div class="address-text copyable-text" onclick="copyTextOnClick(event)" data-copy-text='${escAttrSingle(prop.address || "No address")}' data-tooltip-infopanel='${escAttrSingle(`"${prop.address || 'No address'}": copy to clipboard`)}'>${prop.address}</div>
+                    <div class="address-text copyable-text" onclick="copyTextOnClick(event)" data-copy-text='${escAttrSingle(prop.address || "No address")}' data-tooltip-infopanel='${escAttrSingle(`"${prop.address || 'No address'}": copy to clipboard`)}'>${escapeHtml(prop.address || "No address")}</div>
                     ${proprietorBadges}
                 </div>
             </div>`;
@@ -3173,7 +3237,7 @@ function generatePanelHtml(propertyItem, markerId) {
                             
                                 controlIconsHtml += `
                                     <i class="material-symbols-outlined control-icon" aria-hidden="true"
-                                        data-tooltip-infopanel="${tooltipText}">
+                                        data-tooltip-infopanel="${escapeHtmlAttribute(tooltipText)}">
                                         ${controlInfo.icon}
                                     </i>`;
                             }
@@ -3199,7 +3263,7 @@ function generatePanelHtml(propertyItem, markerId) {
                             <div class="entity-title">
                                 <b>${boLabel}:</b>
                                 <span class="entity-name">
-                                        <span class="copyable-text" onclick="copyTextOnClick(event)" data-tooltip-infopanel="Click to copy name">${bo.name}</span>
+                                        <span class="copyable-text" onclick="copyTextOnClick(event)" data-tooltip-infopanel="Click to copy name">${escapeHtml(bo.name)}</span>
                                         ${boCountBadge} 
                                         ${boMapIcon}
                                         ${boGoogleIcon}
@@ -3207,7 +3271,7 @@ function generatePanelHtml(propertyItem, markerId) {
                                 </span>
                             </div>
                             ${controlIconsContainer}
-                            <div class="address-text copyable-text" onclick="copyTextOnClick(event)" data-copy-text='${escAttrSingle(bo.address || "No address")}' data-tooltip-infopanel='${escAttrSingle(`"${bo.address || 'No address'}": copy to clipboard`)}'>${bo.address}</div>
+                            <div class="address-text copyable-text" onclick="copyTextOnClick(event)" data-copy-text='${escAttrSingle(bo.address || "No address")}' data-tooltip-infopanel='${escAttrSingle(`"${bo.address || 'No address'}": copy to clipboard`)}'>${escapeHtml(bo.address || "No address")}</div>
                             ${(!prop.excluded && bo.reg_status === 'suspect' && !prop.has_individual_non_trustee) ? createStatusBadge('suspect') : ''}${(!prop.excluded && bo.sanctioned) ? createStatusBadge('sanctioned') : ''}
                         </div>
                     </div>`;
@@ -3923,17 +3987,19 @@ function panToLocation(lat, lon, color, title, event, propertyTitleNumber, origi
     if (event) {
         event.stopPropagation(); // Prevents the panel from closing
     }
-    if (lat && lon) {
+    const latNum = Number(lat);
+    const lonNum = Number(lon);
+    if (Number.isFinite(latNum) && Number.isFinite(lonNum)) {
         // Clear any old temporary markers
         tempMarkers.forEach(m => map.removeLayer(m));
         tempMarkers = [];
 
         // Pan the map
         const z = (typeof zoomLevel === 'number' && !isNaN(zoomLevel)) ? zoomLevel : 12;
-        map.flyTo([lat, lon], z, { duration: getFlyDuration() });
+        map.flyTo([latNum, lonNum], z, { duration: getFlyDuration() });
 
         // Create the new temporary marker
-        const tempMarker = L.marker([lat, lon], {
+        const tempMarker = L.marker([latNum, lonNum], {
             icon: createBigIcon(color),
             title: title,
             zIndexOffset: 1000
@@ -4290,10 +4356,13 @@ function showValuablePropertiesPanel() {
         const color = categoryColours[category] || '#ccc';
         const truncatedAddress = address.length > 25 ? address.substring(0, 25) + '...' : address;
 
+        const safeAddressTitle = escapeHtmlAttribute(toTitleCase(address));
+        const safeTruncatedAddress = escapeHtml(toTitleCase(truncatedAddress));
+
         itemEl.innerHTML = `
             <div class="status-circle" style="background-color: ${color};"></div>
-            <div class="price">£${formatNumber(prop.price_paid)}</div>
-            <div class="address" title="${toTitleCase(address)}">${toTitleCase(truncatedAddress)}</div>
+            <div class="price">£${formatPriceShort(prop.price_paid)}</div>
+            <div class="address" title="${safeAddressTitle}">${safeTruncatedAddress}</div>
         `;
         itemEl.addEventListener('click', handleValuableItemClick);
         listContainer.appendChild(itemEl);

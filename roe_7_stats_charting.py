@@ -1,8 +1,13 @@
 #!/usr/bin/env python3
 import csv
 import json
+from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Tuple, Any
+from typing import Dict, List, Tuple, Any, TypedDict
+
+from shapely.geometry import Point, shape
+from shapely.ops import unary_union
+from shapely.prepared import prep
 
 from roe_common_functions import upload_all_files
 
@@ -65,6 +70,67 @@ CATEGORY_COLORS = {
     "Only trustees listed as beneficial owners": "#4C72B0", # Blue
     "Ownership properly disclosed": "#1B5E20",             # Dark green
 }
+
+PROPERTY_STATUS_ORDER = ["red", "grey", "orange", "blue", "green"]
+PROPERTY_STATUS_LABELS = {
+    "red": "Hidden BO",
+    "grey": "Failed to register",
+    "orange": "No BO registered",
+    "blue": "Only trustees registered",
+    "green": "BOs disclosed",
+}
+PROPERTY_STATUS_COLORS = {
+    "green": "#6ACC64",
+    "orange": "#DD8452",
+    "red": "#C44E52",
+    "grey": "#939699",
+    "purple": "#563d7c",
+    "blue": "#4C72B0",
+}
+PROPERTY_STATUS_EXCLUDE = {"purple"}
+PROPERTY_VALUE_YEARS = (2023, 2024, 2025)
+PROPERTIES_JSON_BASENAME = "overseas_entities_properties"
+PROPRIETORS_JSON_BASENAME = "overseas_entities_proprietors"
+PROPERTIES_JSON_INFO = "overseas_entities_json_info.txt"
+REGIONS_GEOJSON_PATH = Path("data/uk_nuts1_ew.json")
+
+REGION_ORDER = [
+    "London",
+    "South East",
+    "East",
+    "South West",
+    "Midlands",
+    "North East",
+    "North West",
+    "Yorkshire",
+    "Wales",
+]
+
+REGION_NAME_MAP = {
+    "london": "London",
+    "south east": "South East",
+    "south west": "South West",
+    "east of england": "East",
+    "east midlands": "Midlands",
+    "west midlands": "Midlands",
+    "north east": "North East",
+    "north west": "North West",
+    "yorkshire and the humber": "Yorkshire/Humber",
+    "wales": "Wales",
+}
+
+class PriceStats(TypedDict):
+    total: int
+    sample_value_sum: int
+    sample_title_count: int
+    sample_transactions: int
+
+
+class RegionPriceStats(TypedDict):
+    total: int
+    sample_value_sum: int
+    sample_title_count: int
+    estimate: int
 
 
 def fade_hex(hex_color: str, factor: float) -> str:
@@ -162,8 +228,12 @@ def parse_sections(lines: List[str]) -> Dict[str, List[str]]:
 
 
 # Parse an integer-like string (handling commas, percents, blanks, and dashes) into an int.
-def parse_int(value: str) -> int:
-    value = (value or "").strip()
+def parse_int(value: Any) -> int:
+    if value is None:
+        return 0
+    if isinstance(value, (int, float)):
+        return int(value)
+    value = str(value).strip()
     if value == "" or value == "-":
         return 0
     # Remove commas and percent signs
@@ -184,6 +254,380 @@ def fmt_pct(value: float, digits: int = 1) -> str:
 
 def fmt_money(value: int) -> str:
     return f"£{value:,}"
+
+
+def to_billions(value: int) -> int:
+    return int(round(value / 1_000_000_000))
+
+
+def fmt_money_bn(value: int) -> str:
+    return f"£{to_billions(value):,}bn"
+
+
+
+def parse_float(value: Any) -> float | None:
+    if value is None:
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    s = str(value).strip()
+    if not s:
+        return None
+    try:
+        return float(s)
+    except ValueError:
+        return None
+
+
+def find_properties_json_path(repo_root: Path) -> Path:
+    webapp_dir = repo_root / "webapp"
+    info_path = webapp_dir / PROPERTIES_JSON_INFO
+    if info_path.exists():
+        lines = info_path.read_text(encoding="utf-8", errors="ignore").splitlines()
+        if len(lines) >= 2:
+            hash_id = lines[1].strip()
+            if hash_id:
+                candidate = webapp_dir / f"{PROPERTIES_JSON_BASENAME}.{hash_id}.json"
+                if candidate.exists():
+                    return candidate
+
+    matches = sorted(webapp_dir.glob(f"{PROPERTIES_JSON_BASENAME}.*.json"))
+    if matches:
+        return max(matches, key=lambda p: p.stat().st_mtime)
+
+    raise SystemExit(f"Properties JSON not found in {webapp_dir}")
+
+
+def find_proprietors_json_path(repo_root: Path) -> Path:
+    webapp_dir = repo_root / "webapp"
+    info_path = webapp_dir / PROPERTIES_JSON_INFO
+    if info_path.exists():
+        lines = info_path.read_text(encoding="utf-8", errors="ignore").splitlines()
+        if len(lines) >= 2:
+            hash_id = lines[1].strip()
+            if hash_id:
+                candidate = webapp_dir / f"{PROPRIETORS_JSON_BASENAME}.{hash_id}.json"
+                if candidate.exists():
+                    return candidate
+
+    matches = sorted(webapp_dir.glob(f"{PROPRIETORS_JSON_BASENAME}.*.json"))
+    if matches:
+        return max(matches, key=lambda p: p.stat().st_mtime)
+
+    raise SystemExit(f"Proprietors JSON not found in {webapp_dir}")
+
+
+def parse_date_year(value: Any) -> int | None:
+    if not value:
+        return None
+    try:
+        return datetime.strptime(str(value).strip(), "%d-%m-%Y").year
+    except (ValueError, TypeError):
+        return None
+
+
+def property_proprietor_key(prop: Dict[str, Any], proprietors: Dict[str, Any]) -> str:
+    ids = prop.get("ps") or []
+    names: List[str] = []
+    for pid in ids:
+        key = str(pid)
+        proprietor = proprietors.get(key)
+        if not proprietor:
+            continue
+        name = proprietor.get("n")
+        if not name:
+            continue
+        cleaned = str(name).strip().upper()
+        if cleaned:
+            names.append(cleaned)
+    if not names:
+        return ""
+    return "|".join(sorted(set(names)))
+
+
+def normalize_region_name(raw: str) -> str:
+    name = (raw or "").strip()
+    name = name.replace("(England)", "").replace("(England", "").strip()
+    while "  " in name:
+        name = name.replace("  ", " ")
+    return name
+
+
+def map_region_label(raw: str) -> str | None:
+    name = normalize_region_name(raw)
+    if not name:
+        return None
+    return REGION_NAME_MAP.get(name.lower())
+
+
+def load_region_geometries(path: Path) -> Dict[str, Any]:
+    if not path.exists():
+        raise SystemExit(f"Region boundaries not found: {path}")
+    data = json.loads(path.read_text(encoding="utf-8", errors="ignore"))
+    features = data.get("features", [])
+    geoms_by_label: Dict[str, List[Any]] = {}
+    for feat in features:
+        props = feat.get("properties", {}) or {}
+        raw_name = (
+            props.get("NUTS112NM")
+            or props.get("NUTS_NAME")
+            or props.get("name")
+            or ""
+        )
+        label = map_region_label(str(raw_name))
+        if not label:
+            continue
+        geom = shape(feat.get("geometry"))
+        if geom.is_empty:
+            continue
+        geoms_by_label.setdefault(label, []).append(geom)
+
+    prepared: Dict[str, Any] = {}
+    for label, geoms in geoms_by_label.items():
+        merged = unary_union(geoms) if len(geoms) > 1 else geoms[0]
+        prepared[label] = prep(merged)
+    return prepared
+
+
+def region_for_point(lat: float, lon: float, region_geoms: Dict[str, Any]) -> str | None:
+    pt = Point(lon, lat)
+    for region in REGION_ORDER:
+        geom = region_geoms.get(region)
+        if geom and geom.intersects(pt):
+            return region
+    return None
+
+
+def estimate_property_values(
+    properties: List[Dict[str, Any]],
+    proprietors: Dict[str, Any],
+    years: Tuple[int, ...] = PROPERTY_VALUE_YEARS,
+) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
+    stats: Dict[str, PriceStats] = {
+        status: {
+            "total": 0,
+            "sample_value_sum": 0,
+            "sample_title_count": 0,
+            "sample_transactions": 0,
+        }
+        for status in PROPERTY_STATUS_ORDER
+    }
+    total_count = 0
+    total_sample_sum = 0
+    total_sample_titles = 0
+    seen_transactions: set[tuple[int, str, str]] = set()
+    dropped_duplicates = 0
+    dropped_value = 0
+
+    for prop in properties:
+        status = str(prop.get("st") or "green").strip().lower()
+        if status in PROPERTY_STATUS_EXCLUDE:
+            continue
+        if status not in stats:
+            continue
+
+        stats[status]["total"] += 1
+        total_count += 1
+
+        prop_year = parse_date_year(prop.get("dt"))
+        if prop_year not in years:
+            continue
+
+        price = parse_int(prop.get("pr"))
+        if price <= 0:
+            continue
+
+        stats[status]["sample_title_count"] += 1
+        total_sample_titles += 1
+
+        prop_name = property_proprietor_key(prop, proprietors)
+        date_str = str(prop.get("dt") or "").strip()
+        if prop_name:
+            trans_key = (price, date_str, prop_name)
+            if trans_key in seen_transactions:
+                dropped_duplicates += 1
+                dropped_value += price
+                continue
+            seen_transactions.add(trans_key)
+
+        stats[status]["sample_value_sum"] += price
+        stats[status]["sample_transactions"] += 1
+        total_sample_sum += price
+
+    entries: List[Dict[str, Any]] = []
+    for status in PROPERTY_STATUS_ORDER:
+        data = stats[status]
+        label = PROPERTY_STATUS_LABELS.get(status, status.title())
+        sample_titles = data["sample_title_count"]
+        if sample_titles <= 0:
+            raise SystemExit(f"ERROR: No price data for {label} properties in {', '.join(map(str, years))}.")
+        average = data["sample_value_sum"] / sample_titles
+        estimate = int(round(average * data["total"]))
+        entries.append(
+            {
+                "status": status,
+                "label": label,
+                "total_count": data["total"],
+                "sample_count": sample_titles,
+                "sample_sum": data["sample_value_sum"],
+                "estimate": estimate,
+            }
+        )
+
+    if total_sample_titles <= 0:
+        raise SystemExit(f"ERROR: No price data for non-sanctioned properties in {', '.join(map(str, years))}.")
+
+    total_average = total_sample_sum / total_sample_titles
+    total_estimate = int(round(total_average * total_count))
+    total_entry = {
+        "label": "Total",
+        "total_count": total_count,
+        "sample_count": total_sample_titles,
+        "sample_sum": total_sample_sum,
+        "estimate": total_estimate,
+    }
+
+    if dropped_duplicates:
+        print(f"Deduplication complete: Ignored {fmt_int(dropped_duplicates)} duplicate price entries.")
+        print(f"Deduplication removed {fmt_money(dropped_value)} ({fmt_money_bn(dropped_value)}) of price data.")
+    else:
+        print("Deduplication complete: No duplicate price entries detected.")
+
+    return entries, total_entry
+
+
+def print_estimated_property_values(entries: List[Dict[str, Any]], total_entry: Dict[str, Any], years: Tuple[int, ...]) -> None:
+    years_label = ", ".join(map(str, years))
+    print(f"\nEstimated property values (all years, derived from {years_label} price-paid data)")
+    for entry in entries:
+        print(
+            f"{entry['label']}: {fmt_money_bn(entry['estimate'])} "
+            f"(from a sample of {fmt_int(entry['sample_count'])} properties; "
+            f"total properties: {fmt_int(entry['total_count'])})"
+        )
+    print(
+        f"{total_entry['label']}: {fmt_money_bn(total_entry['estimate'])} "
+        f"(from a sample of {fmt_int(total_entry['sample_count'])} properties; "
+        f"total properties: {fmt_int(total_entry['total_count'])})"
+    )
+
+
+def estimate_property_values_by_region(
+    properties: List[Dict[str, Any]],
+    region_geoms: Dict[str, Any],
+    proprietors: Dict[str, Any],
+    years: Tuple[int, ...] = PROPERTY_VALUE_YEARS,
+) -> Dict[str, Dict[str, RegionPriceStats]]:
+    stats: Dict[str, Dict[str, RegionPriceStats]] = {
+        region: {
+            status: {"total": 0, "sample_value_sum": 0, "sample_title_count": 0, "estimate": 0}
+            for status in PROPERTY_STATUS_ORDER
+        }
+        for region in REGION_ORDER
+    }
+    seen_transactions: Dict[str, set[tuple[int, str, str]]] = {
+        region: set() for region in REGION_ORDER
+    }
+
+    for prop in properties:
+        status = str(prop.get("st") or "green").strip().lower()
+        if status in PROPERTY_STATUS_EXCLUDE or status not in PROPERTY_STATUS_ORDER:
+            continue
+
+        lat = parse_float(prop.get("lat"))
+        lon = parse_float(prop.get("lon"))
+        if lat is None or lon is None:
+            continue
+
+        region = region_for_point(lat, lon, region_geoms)
+        if not region:
+            continue
+
+        stats[region][status]["total"] += 1
+
+        prop_year = parse_date_year(prop.get("dt"))
+        if prop_year not in years:
+            continue
+
+        price = parse_int(prop.get("pr"))
+        if price <= 0:
+            continue
+
+        stats[region][status]["sample_title_count"] += 1
+
+        prop_name = property_proprietor_key(prop, proprietors)
+        date_str = str(prop.get("dt") or "").strip()
+        if prop_name:
+            trans_key = (price, date_str, prop_name)
+            if trans_key in seen_transactions[region]:
+                continue
+            seen_transactions[region].add(trans_key)
+
+        stats[region][status]["sample_value_sum"] += price
+
+    for region in REGION_ORDER:
+        for status in PROPERTY_STATUS_ORDER:
+            data = stats[region][status]
+            sample_titles = data["sample_title_count"]
+            if data["total"] <= 0 or sample_titles <= 0:
+                data["estimate"] = 0
+                continue
+            average = data["sample_value_sum"] / sample_titles
+            data["estimate"] = int(round(average * data["total"]))
+
+    return stats
+
+
+def make_estimated_property_values_regions_chart(
+    region_stats: Dict[str, Dict[str, RegionPriceStats]],
+) -> Dict[str, Any]:
+    regions = REGION_ORDER
+    series: List[Dict[str, Any]] = []
+
+    for status in PROPERTY_STATUS_ORDER:
+        label = PROPERTY_STATUS_LABELS.get(status, status.title())
+        values: List[float] = []
+        tooltip_html: List[str] = []
+        for region in regions:
+            data = region_stats[region][status]
+            estimate = data["estimate"]
+            values.append(float(to_billions(estimate)))
+            tooltip_html.append(
+                f"{region}<br>{label}<br>Estimated value: {fmt_money_bn(estimate)}"
+                f"<br>From a sample of {fmt_int(data['sample_title_count'])}"
+            ) 
+
+        series.append(
+            build_bar_series(
+                label,
+                values,
+                tooltip_html=tooltip_html,
+                color=PROPERTY_STATUS_COLORS.get(status, BRAND_COLOR),
+                stack="total",
+            )
+        )
+
+    option = base_option("Overseas entities - estimated property values by region")
+    option.update(
+        {
+            "legend": {"show": True, "top": 55, "left": "center"},
+            "grid": {"left": "8%", "right": "5%", "top": 110, "bottom": "12%", "containLabel": True},
+            "xAxis": {
+                "type": "category",
+                "data": regions,
+                "axisLabel": {"interval": 0},
+                "axisTick": {"alignWithLabel": True},
+            },
+            "yAxis": {
+                "type": "value",
+                "name": "",
+                "axisLabel": {"formatter": "£{value}bn"},
+                "splitLine": {"show": True, "lineStyle": {"color": "#ececec"}},
+            },
+            "series": series,
+        }
+    )
+    return option
 
 
 def load_top_trustees(csv_path: Path, limit: int) -> List[Tuple[str, int, int]]:
@@ -327,6 +771,7 @@ def build_bar_series(
     color: str | None = None,
     stack: str | None = None,
     label_texts: List[str] | None = None,
+    item_colors: List[str] | None = None,
     label_color: str = "#FFFFFF",
     label_font_size: int = 11,
 ) -> Dict[str, Any]:
@@ -335,6 +780,8 @@ def build_bar_series(
         item: Dict[str, Any] = {"value": val}
         if tooltip_html is not None:
             item["tooltip"] = {"formatter": tooltip_html[idx]}
+        if item_colors is not None:
+            item["itemStyle"] = {"color": item_colors[idx]}
         if label_texts is not None:
             text = label_texts[idx]
             if text:
@@ -355,7 +802,7 @@ def build_bar_series(
     }
     if stack:
         series["stack"] = stack
-    if color:
+    if color and item_colors is None:
         series["itemStyle"] = {"color": color}
     if label_texts is not None:
         series["label"] = {
@@ -364,6 +811,53 @@ def build_bar_series(
             "verticalAlign": "middle",
         }
     return series
+
+
+def make_estimated_property_values_chart(
+    entries: List[Dict[str, Any]],
+) -> Dict[str, Any]:
+    labels = [entry["label"] for entry in entries]
+    values = [float(to_billions(entry["estimate"])) for entry in entries]
+    tooltip_html = [
+        (
+            f"{entry['label']}<br>Estimated value: {fmt_money_bn(entry['estimate'])}"
+            f"<br>From a sample of {fmt_int(entry['sample_count'])}"
+        )
+        for entry in entries
+    ]
+
+    item_colors = [PROPERTY_STATUS_COLORS.get(entry["status"], BRAND_COLOR) for entry in entries]
+
+    series = [
+        build_bar_series(
+            "Estimated property value",
+            values,
+            tooltip_html=tooltip_html,
+            item_colors=item_colors,
+        )
+    ]
+
+    option = base_option("Overseas entities - estimated property values by category")
+    option.update(
+        {
+            "legend": {"show": False},
+            "grid": {"left": "8%", "right": "5%", "top": 70, "bottom": "10%", "containLabel": True},
+            "xAxis": {
+                "type": "category",
+                "data": labels,
+                "axisLabel": {"interval": 0},
+                "axisTick": {"alignWithLabel": True},
+            },
+            "yAxis": {
+                "type": "value",
+                "name": "",
+                "axisLabel": {"formatter": "£{value}bn"},
+                "splitLine": {"show": True, "lineStyle": {"color": "#ececec"}},
+            },
+            "series": series,
+        }
+    )
+    return option
 
 
 # Build a stacked percentage bar chart by year, excluding the "Ownership properly disclosed" category.
@@ -1222,7 +1716,27 @@ def main() -> None:
             out_dir / f"country_abs_{slug}.json",
         )
 
-    print(f"Saved charts to {out_dir.resolve()}")
+    properties_path = find_properties_json_path(repo_root)
+    properties = json.loads(properties_path.read_text(encoding="utf-8", errors="ignore"))
+    proprietors_path = find_proprietors_json_path(repo_root)
+    proprietors = json.loads(proprietors_path.read_text(encoding="utf-8", errors="ignore"))
+    estimated_entries, estimated_total = estimate_property_values(properties, proprietors, PROPERTY_VALUE_YEARS)
+    print_estimated_property_values(estimated_entries, estimated_total, PROPERTY_VALUE_YEARS)
+    estimated_option = make_estimated_property_values_chart(estimated_entries)
+    save_option(
+        estimated_option,
+        out_dir / "estimated_property_values.json",
+    )
+
+    region_geoms = load_region_geometries(repo_root / REGIONS_GEOJSON_PATH)
+    region_stats = estimate_property_values_by_region(properties, region_geoms, proprietors, PROPERTY_VALUE_YEARS)
+    region_option = make_estimated_property_values_regions_chart(region_stats)
+    save_option(
+        region_option,
+        out_dir / "estimated_property_values_regions.json",
+    )
+
+    print(f"\nSaved charts to {out_dir.resolve()}")
     upload_all_files()
 
 
