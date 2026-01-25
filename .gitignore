@@ -1,0 +1,50 @@
+
+# =============== Common Exclusions (Optional but Recommended) ===============
+# You might still want to explicitly ignore common files/folders that these
+# extensions might generate or be associated with, even if they match the
+# extension (e.g., virtual environments, IDE files, OS-specific files).
+
+# Python specific
+__pycache__/
+*.py[cod] 
+*$py.class
+
+# Virtual environment
+# Replace 'venv' with your virtual environment's folder name if different
+venv/
+.venv/
+ENV/
+env/
+env.bak/
+venv.bak/
+
+# IDE / Editor specific
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+webapp/charts/
+
+# OS specific
+.DS_Store
+Thumbs.db
+
+companies_house_settings.py
+data/
+overseas_archive/
+original/
+*.json
+*.msgpack
+*.db
+*.db.backup
+**/suspect_entities.txt 
+webapp/*.csv
+upload
+
+# but we want the example json to be included in the repo
+!overseas_entities_example.json
+
+# and the control types json
+!overseas_entities_map_control_types.json

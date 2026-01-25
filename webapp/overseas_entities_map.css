@@ -1,0 +1,2042 @@
+/* Base Styles */
+    html, body {
+      height: 100%;
+      width: 100%;
+      margin: 0;
+      padding: 0;
+      font-family: 'Poppins', sans-serif;
+    }
+    #map { height: 100%; width: 100%; }
+
+    /* Disable text selection throughout the app for a cleaner drag-and-drop feel */
+    body {
+      -webkit-user-select: none; /* Safari */
+      -moz-user-select: none;    /* Firefox */
+      -ms-user-select: none;     /* IE/Edge */
+      user-select: none;         /* Standard */
+      height: 100vh; /* Make body fill the entire screen height */
+    }
+
+    html.embedded #headerContainer,
+    html.embedded #logoContainer,
+    html.embedded #mobileControlsOffcanvas .offcanvas-footer {
+      display: none;
+    }
+
+    .material-symbols-outlined.control-icon {
+  font-family: 'Material Symbols Outlined';
+  font-size: 28px;           /* bump visual size */
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: -3px;      /* nudge baseline as needed */
+  /* Variable font axes: FILL 0 (outlined), 1 (filled) */
+  font-variation-settings: 
+    'FILL' 1, 
+    'wght' 400, 
+    'GRAD' 0, 
+    'opsz' 24;
+  padding: 4px;              /* better tap target */
+  border-radius: 6px;        /* optional hover/tap bg */
+}
+
+@media (pointer: coarse) {
+  .material-symbols-outlined.control-icon {
+    font-size: 32px;         /* larger on touch devices */
+    padding: 6px;
+  }
+}
+
+
+ 
+    /* Re-enable text selection for input fields so they remain editable */
+    input[type="search"],
+    input[type="text"],
+    input[type="email"],
+    input[type="password"] {
+      -webkit-user-select: auto;
+      -moz-user-select: auto;
+      -ms-user-select: auto;
+      user-select: auto;
+    }
+    
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(255, 255, 255, 0.8); /* semi-transparent page overlay */
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      z-index: 3000;  /* Ensures on top of everything */
+    
+    }
+    .spinner {
+      border: 8px solid #f3f3f3;
+      border-top: 8px solid #3498db;
+      border-radius: 50%;
+      width: 60px; height: 60px;
+      animation: spin 1s linear infinite;
+      margin-bottom: 10px;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    @keyframes haptic-bump {
+      0%   { transform: translate3d(0, 0, 0) scale(1); }
+      35%  { transform: translate3d(0, 2px, 0) scale(0.97); }
+      65%  { transform: translate3d(0, -1px, 0) scale(1.02); }
+      100% { transform: translate3d(0, 0, 0) scale(1); }
+    }
+
+    .haptic-bump {
+      animation: haptic-bump 160ms ease-out;
+    }
+
+
+    #headerContainer {
+      position: fixed;
+      top: 17px;
+      left: 170px;
+      z-index: 1200;
+
+      background: rgba(255, 255, 255, 0.2); /* A bit more opaque for readability */
+      backdrop-filter: blur(10px);          /* The "frosting" effect */
+      -webkit-backdrop-filter: blur(10px);  /* For Safari compatibility */
+      border: 1px solid rgba(255, 255, 255, 0.2); /* A subtle, light border */
+      border-radius: 8px;                   /* Matches your other controls */
+      box-shadow: var(--elev-1); /* A softer, deeper shadow */
+      padding: 5px 20px;                    /* Add some internal spacing */
+    }
+
+    #logoContainer {
+      position: fixed;
+      top: 17px;
+      left: 10px;
+      z-index: 1200;
+    }
+
+    #logoContainer img { width: 150px; }
+    #pageTitle {
+      cursor: default; /* Sets the cursor to the standard arrow */
+      user-select: none; /* Prevents text selection */
+      font-size: 28px; /* Slightly smaller to fit nicely in the new padding */
+      font-weight: 600;
+      color: #1a202c; /* A professional, very dark slate gray */
+      text-shadow: none; /* Remove the old shadow */
+    }
+
+    /* Map Controls Container */
+    #mapControls {
+      background: rgba(255, 255, 255, 0.6); /* Lower opacity background */
+      backdrop-filter: blur(10px);          /* The "frosting" effect */
+      -webkit-backdrop-filter: blur(10px);  /* For Safari compatibility */
+      border: 1px solid rgba(255, 255, 255, 0.2); /* A subtle, light border */
+      border-radius: 8px;                   /* A slightly softer corner */
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15); /* A softer, deeper shadow */
+
+      position: fixed;
+      left: 10px;
+      top: 150px;
+      z-index: 1200;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      width: 300px;
+    }
+
+    html.embedded #mapControls {
+      top: 10px;
+      left: 10px;
+    }
+
+    /* Custom, accessible focus styles for keyboard navigation */
+    :is(button, a, input):focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 3px #fff, 0 0 0 5px #007bff; /* A double shadow for high contrast on any background */
+      transition: box-shadow 0.1s ease-in-out;
+    }
+
+    /* Increase width by 20% on desktop */
+    @media (min-width: 991px) {
+      #mapControls {
+        width: 360px;
+      }
+    }
+    
+    #mapControls button:hover {
+      box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+      transform: translateY(-2px);
+      transition: all 0.2s ease-in-out;
+    }
+    /* Search Containers */
+    .search-container {
+      background: rgba(255,255,255,0.9);
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    .search-container .input-group-text {
+      font-size: 15px; /* 25% smaller than previous 20px */
+      background: transparent;
+      border: none;
+    }
+    /* Ensure absolute-positioned clear button anchors correctly */
+    .search-container .input-group {
+      position: relative;
+    }
+    .search-container input {
+      font-size: 15px; /* 25% smaller than previous 20px */
+      height: calc(1.5em + 0.75rem + 2px); /* reduce vertical size proportionally */
+      padding-right: 2.2em; /* room for clear button */
+    }
+    
+    /* Legend (desktop remains on map) */
+.custom-legend {
+
+      background: rgba(255, 255, 255, 0.6);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      box-shadow: var(--elev-1);
+
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      z-index: 1100;
+      padding: 10px;
+      line-height: 18px;
+      font-size: 20px;
+      width: 410px;
+      height: fit-content;
+    }
+    .custom-legend.minimized { height: 28px; overflow: hidden; padding: 2px 6px; }
+    .custom-legend h4 { margin: 0 0 5px 0; font-size: 16px; display: inline-block; }
+    
+    .legend-item {
+      cursor: pointer;
+      margin-bottom: 4px;
+      user-select: none;
+      display: flex;
+      align-items: center;
+      color: #000;
+      transition: color 0.2s ease-in-out, transform 0.18s ease-out;
+      will-change: transform;
+    }
+    .legend-item.inactive { color: #aaa; }
+    .legend-box {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      margin-right: 5px;
+      border: 1px solid black;
+      vertical-align: middle;
+    }
+    .legend-box.inactive { opacity: 0.4; }
+
+    /* Ensure the offcanvas overlays the fixed UI */
+    .offcanvas {
+      z-index: 1400;
+      position: relative;
+    }
+
+    /* Hamburger Button (custom style) */
+    .custom-hamburger-btn {
+      background-color: #6c757d; /* grey */
+      border: none;
+      border-radius: 4px;
+      padding: 10px;
+      z-index: 1300;
+    }
+    .custom-hamburger-btn i {
+      font-size: 24px;
+      color: white;
+    }
+
+    /* Offcanvas footer with logo at bottom left */
+    .offcanvas-footer { 
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+    }
+    .offcanvas-footer img {
+      width: 50px;
+    }
+
+    #mobileControlsOffcanvas {
+      position: fixed;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      width: 60%;         /* width of mobile offcanvas */
+      max-width: 400px;
+      z-index: 2000;      /* higher than the map */
+    }
+
+
+
+
+#modeToggleContainer {
+  display: flex;
+  justify-content: space-around; /* Distributes icons evenly */
+  align-items: center;
+  padding: 5px; /* A little padding so icons aren't edge-to-edge */
+}
+
+.mode-toggle-btn {
+  flex: 1; /* Each button will grow to take up equal space */
+  background: transparent;
+  border: none;
+  color: #555; /* A dark grey for inactive icons */
+  padding: 8px 0;
+  margin: 0 4px; /* Small gap between buttons */
+  cursor: pointer;
+  border-radius: 4px; /* Matches other controls */
+  transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
+  text-align: center;
+  transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
+}
+
+.mode-toggle-btn:hover {
+  background-color: #e9ecef; /* A light grey for hover feedback */
+}
+
+/* Style for the selected button */
+.mode-toggle-btn.active {
+  background-color: #1133AF !important; /* brand blue */
+  color: #fff !important;
+  box-shadow: 0 0 8px rgba(17, 51, 175, 0.45);
+}
+
+/* Explicitly style the icon within the active button */
+.mode-toggle-btn.active .material-icons,
+.mode-toggle-btn.active .material-symbols-outlined {
+  color: #fff !important;
+  fill: #fff !important;             /* ensure SVG icons inherit color */
+}
+
+/* Control the size of the icons themselves */
+.mode-toggle-btn .material-icons {
+  font-size: 28px;
+  vertical-align: middle; /* Helps with perfect centering */
+}
+
+#propertyTypeSelector {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+#propertyTypeSelector .property-type-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.property-type-btn {
+  flex: 1 1 0;
+  background: #f7f7f7;
+  border: 1px solid #cfd4da;
+  border-radius: 999px;
+  padding: 4px 8px;
+  font-size: 12px;
+  cursor: pointer;
+  color: #333;
+  line-height: 1.2;
+  white-space: nowrap;
+  text-align: center;
+}
+
+.property-type-btn.active {
+  background: #1133AF;
+  color: #fff;
+  border-color: #1133AF;
+  box-shadow: 0 0 6px rgba(17, 51, 175, 0.35);
+}
+
+@media (min-width: 991px) {
+  #propertyTypeSelector .property-type-pills {
+    flex-wrap: nowrap;
+    gap: 4px;
+  }
+}
+
+/* Show Link button in popups */
+.show-link {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  background-color: #2196f3;
+  border: none;
+  border-radius: 4px;
+  color: #fff;
+  padding: 4px 6px;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.show-link i.material-icons {
+  font-size: 18px;
+}
+
+
+/* Custom Cluster Icon Styling */
+.custom-cluster-icon {
+  color: white;
+  font-weight: bold;
+  text-align: center;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.75); /* A slightly transparent border looks clean */
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5); /* A subtle shadow helps it stand out */
+}
+
+/* Role markers for connection endpoints */
+.role-marker-wrapper { /* empty; keeps Leaflet happy */ }
+.role-marker {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #fff;
+  border: 3px solid #333; /* color overridden inline */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+}
+.role-marker-icon {
+  font-family: 'Material Symbols Outlined';
+  font-size: 22px;
+  line-height: 1;
+  font-variation-settings: 'FILL' 1, 'wght' 600, 'GRAD' 0, 'opsz' 24;
+}
+/* --- Action Buttons Row --- */
+#action-buttons-container {
+  display: flex;
+  gap: 10px; /* Creates a nice space between the buttons */
+}
+
+#action-buttons-container button {
+  flex: 1; /* This makes each button grow to fill an equal amount of space */
+  display: flex !important; /* Use !important to override JS show/hide styles */
+  align-items: center;
+  justify-content: center;
+  
+  padding: 10px 0;
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  color: #343a40; /* A dark grey for the icon */
+}
+
+#action-buttons-container button .material-icons {
+  font-size: 24px; /* Controls the size of the icon */
+}
+
+#action-buttons-container button:hover {
+  background: #e9ecef; /* A light grey for hover feedback */
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+
+#info-panel {
+    background-color: transparent;        /* let the header truly overlay the map */
+    border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: var(--elev-1);
+    transition: opacity 0.2s ease-in-out;
+    position: absolute;
+    width: 385px;
+    max-height: 80vh;
+    z-index: 1000;
+    border-radius: 12px;
+    padding: 0;                 /* full-bleed header, content handles its own padding */
+    overflow-y: auto;
+}
+
+/* Class to hide the panel */
+#info-panel.hidden { display: none; }
+
+/* Smooth open/close animation */
+#info-panel { opacity: 0; transition: opacity 180ms ease; }
+#info-panel.showing { opacity: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  #info-panel { transition-duration: 80ms; }
+}
+
+
+/* --- Info Panel Redesign --- */
+
+
+/* Container for all the text content */
+.info-item-content {
+    flex-grow: 1;
+}
+
+/* Typography for different text elements */
+.property-address {
+    font-weight: bold;
+    font-size: 1.05em;
+}
+
+
+
+.address-text {
+    color: #555;
+    font-size: 0.9em;
+}
+
+/* Ensure address blocks stay on their own line even when copyable-text is inline */
+.address-text.copyable-text {
+  display: block;
+}
+
+/* use inline/normal flow instead of flex */
+.entity-title {
+  display: block;          /* or inline-block */
+  white-space: normal;     /* allow normal wrapping */
+}
+
+/* keep everything on the same line when space allows */
+.entity-title .entity-label { 
+  display: inline; 
+  margin-right: 6px; 
+}
+
+.copyable-text {
+  display: inline;
+  vertical-align: middle;
+}
+
+/* This turns the container for the name/badge/icons into a flexbox row */
+.entity-title .entity-name {
+  display: inline;        /* Pure inline flow so icons follow last wrapped word */
+  white-space: normal;    /* Allow normal wrapping */
+}
+
+/* Increase spacing between name → count badge, then slightly smaller to icons */
+.entity-title .entity-name .copyable-text {  /* proprietor/beneficiary name */
+  margin-right: 8px;
+}
+.entity-title .entity-name .ownership-count-badge { /* numeric badge */
+  margin-right: 4px;
+}
+
+/* Keep small action icons inline and tidy */
+.entity-title .entity-name a.search-icon {
+  text-decoration: none;
+  vertical-align: middle;
+}
+
+/* Ensure icon links are never underlined (prevents stray underlines between icons) */
+#info-panel a.search-icon,
+a.search-icon {
+  text-decoration: none !important;
+}
+
+/* Tidy spacing and alignment for the property header icons */
+#property-icons {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.entity-title .entity-name a.search-icon i.material-symbols-outlined {
+  vertical-align: middle;
+}
+
+.status-circle-indicator {
+    vertical-align: middle;
+}
+
+/* The badge no longer needs margin or vertical-align thanks to flexbox */
+.ownership-count-badge {
+    display: inline-block;
+    font-size: 0.75em;
+    font-weight: 600;
+    background-color: #e9ecef;
+    color: #495057 !important;
+    padding: 2px 2px;
+    border-radius: 10px;
+    /* margin-right and vertical-align are no longer needed */
+    text-decoration: none !important;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+
+/* keep the icon glued to the end of the name text */
+.google-search-link {
+    margin-left: 0px;
+    vertical-align: middle;
+}
+
+.property-address-row,
+.entity-title-row {
+  display: flex;
+  align-items: center;  /* This is the key. It vertically centers all direct children. */
+  gap: 8px;             /* Adds a nice, consistent gap between elements */
+}
+
+/* Make sure the main text content takes up remaining space */
+.property-address-row > span,
+.entity-title-row > .entity-title {
+  flex-grow: 1;
+}
+
+
+
+/* Re-style the icon containers to align the icons themselves */
+.control-icons-group {
+    display: flex;
+    align-items: center;
+    gap: 4px; /* A smaller gap for icons within their group */
+}
+
+
+/* Grouping block for each proprietor and their BOs */
+.proprietor-block {
+    padding-bottom: 12px;
+    margin-bottom: 12px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.proprietor-block:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+/* Indent beneficial owner items under their proprietor */
+.bo-item {
+    margin-left: 28px; /* Aligns with the text of the parent proprietor */
+    margin-top: 10px;
+}
+
+/* Main divider between property info and proprietor list */
+hr.section-divider {
+    margin: 12px 0;
+    border: 0;
+    border-top: 1px solid #e9e9e9;
+}
+
+
+/* --- Status Badges --- */
+.status-badge {
+    display: inline-block;
+    padding: 3px 8px;
+    font-size: 0.75em;
+    font-weight: 600;
+    color: white;
+    border-radius: 12px;
+    margin-top: 5px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.status-red { background-color: #C44E52; }    
+.status-blue { background-color: #4C72B0; }   
+.status-grey { background-color: #939699; }     
+.status-green { background-color: #6ACC64; }  
+.status-purple { background-color: #563d7c; } 
+.status-orange { background-color: #DD8452; }
+.status-blue { background-color: #4C72B0; }
+
+.legend-count {
+    color: #555;
+    font-size: 0.1em; 
+    font-weight: normal;
+    margin-left: 4px;
+    font-size: 0.9em; /* Make the font a bit smaller than the layer name */
+    transition: color 0.3s ease; /* Adds a smooth fade for the color change */
+}
+
+/* This new rule targets the count only when the layer is toggled off */
+.legend-item.inactive .legend-count {
+    color: #999; /* A light grey color to match inactive items */
+}
+
+/* modern tooltips */
+
+[data-tooltip] {
+  position: relative;
+  cursor: pointer;
+}
+
+/* Tooltip arrow and box */
+[data-tooltip]::before,
+[data-tooltip]::after {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease-in-out;
+  z-index: 9999;
+}
+
+/* Tooltip box */
+[data-tooltip]::after {
+  content: attr(data-tooltip);
+  bottom: 100%; /* Position above the element */
+  margin-bottom: 8px; /* Space between element and tooltip */
+  background: #343a40;
+  color: white;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 6px 12px;
+  border-radius: 6px;
+  white-space: pre-line;
+}
+
+/* Tooltip arrow */
+[data-tooltip]::before {
+  content: '';
+  bottom: 100%;
+  margin-bottom: 3px;
+  border-top: 5px solid #343a40;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+}
+
+
+/* container for the icons */
+#info-panel .control-icons {
+  display: flex;
+  justify-content: flex-start; /* keep them left aligned */
+  align-items: center;
+  gap: 6px;                     /* spacing between icons */
+  margin-top: 4px;
+}
+
+/* individual icons */
+#info-panel .control-icon {
+  font-size: 1.2em;
+  line-height: 1;
+  cursor: pointer;
+}
+
+#info-panel .control-icon.trust-highlight {
+  color: #b61313;
+}
+
+
+/* Show on hover */
+[data-tooltip]:hover::before,
+[data-tooltip]:hover::after {
+  opacity: 1;
+}
+
+/* Disable hover-based tooltips on touch devices */
+@media (hover: none) and (pointer: coarse) {
+  [data-tooltip]:hover::before,
+  [data-tooltip]:hover::after {
+    display: none;
+  }
+}
+
+#info-tooltip {
+  position: fixed;
+  z-index: 4002;
+  background: rgba(0,0,0,.85);
+  color: #fff;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 14px;
+  line-height: 1.25;
+  white-space: pre-line;      /* This preserves newlines. */
+  max-width: 320px;
+  display: none;
+  transition: opacity .15s ease;
+  pointer-events: none;        /* don’t eat taps */
+}
+
+
+
+/* Text elements that can be copied */
+.copyable-text {
+    cursor: pointer;
+    transition: background-color 0.2s;
+    border-radius: 3px; /* slightly rounded corners for highlight */
+}
+
+.copyable-text:hover {
+    background-color: rgba(0, 0, 0, 0.08); /* A subtle grey highlight */
+}
+
+/* Change the hamburger button to your brand colour */
+.custom-hamburger-btn {
+  background-color: #1133AF; /* Brand color */
+  border: none;
+  border-radius: 4px;
+  padding: 10px;
+  z-index: 1300;
+}
+
+
+/* makes sure we get a search clear on mobile */
+.search-clear-btn {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #888;
+  cursor: pointer;
+  display: none; /* Hidden by default */
+}
+
+#placeSearchResults, #searchResults {
+    max-height: 500px; /* Or whatever height you want */
+    overflow-y: auto;
+    position: relative; /* establish containing block for sticky header */
+}
+
+/* Results header label */
+.results-header {
+  padding: 8px 12px;
+  font-weight: 600;
+  border-bottom: 1px solid #e0e0e0;
+  background: #f8f9fa;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
+.results-clear {
+  background: #e9ecef;
+  border: 1px solid #ced4da;
+  color: #495057;
+  border-radius: 12px;
+  padding: 2px 8px;
+  font-size: 12px;
+}
+
+/* Search result items */
+.results .result-item,
+#searchResults .result-item,
+#placeSearchResults .result-item {
+  padding: 4px 8px;     /* tighter vertical spacing */
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1.25;    /* reduce line height for compact rows */
+}
+
+/* Small status colour dot for result rows */
+.result-item .status-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1px solid #000;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+.results .result-item:hover,
+#searchResults .result-item:hover,
+#placeSearchResults .result-item:hover {
+  background: #f1f3f5;
+}
+
+.results .result-item.selected,
+#searchResults .result-item.selected,
+#placeSearchResults .result-item.selected {
+  background-color: #1133AF;
+  color: #fff;
+}
+
+/* Optional: style the scrollbar for better appearance on WebKit browsers (Chrome, Safari) */
+#placeSearchResults::-webkit-scrollbar,
+#searchResults::-webkit-scrollbar {
+    width: 8px;
+}
+
+#placeSearchResults::-webkit-scrollbar-thumb,
+#searchResults::-webkit-scrollbar-thumb {
+    background-color: #ccc;
+    border-radius: 4px;
+}
+
+/* Smooth momentum scrolling on iOS */
+#placeSearchResults,
+#searchResults {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Results footer (clear link) */
+/* (footer clear removed; we use inline clear in header now) */
+
+/* Larger tap targets for mode buttons on mobile */
+@media (max-width: 991px) {
+  .mode-toggle-btn { padding: 12px 0; }
+  #action-buttons-container button { padding: 14px 0; }
+}
+
+#navigationSearchContainer {
+    /* Apply the floating, frosted glass effect */
+    background: rgba(255, 255, 255, 0.6);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+
+    /* Position it in the top-right corner */
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    z-index: 1200; /* Ensure it's above the map and other elements */
+    padding: 10px;
+    width: 300px;
+}
+
+/* Adjust the place search container to fit the new parent */
+#navigationSearchContainer #placeSearchContainer {
+    background: none; /* Make its background transparent to see the frosted glass */
+    border: none;     /* Remove its internal border */
+    box-shadow: none; /* Remove its shadow */
+    width: 100%;
+}
+
+/* On mobile, move it into the off-canvas menu */
+@media (max-width: 991px) {
+  #navigationSearchContainer {
+    display: none; /* Hide the floating container on mobile */
+  }
+}
+
+/* Mobile: make legend item text modestly larger */
+@media (max-width: 991px) {
+  #legendBox .legend-item {
+    font-size: 1.8em;        /* larger text on mobile */
+    line-height: 1.2;        /* tighter line spacing */
+    margin-bottom: 3px;      /* ~40% reduction from original 5px/4px */
+  }
+}
+
+/* --- Style for tooltips flipped to the bottom --- */
+
+/* Position the flipped tooltip box below the element */
+[data-tooltip].tooltip-on-bottom::after {
+  top: 100%;
+  bottom: auto;
+  margin-top: 8px;
+  margin-bottom: 0;
+}
+
+/* Position the flipped tooltip arrow */
+[data-tooltip].tooltip-on-bottom::before {
+  top: 100%;
+  bottom: auto;
+  margin-top: 3px;
+  border-top: none; /* Remove original top border */
+  border-bottom: 5px solid #343a40; /* Add a new bottom border */
+}
+
+
+/* Styles for the new clear button on mobile */
+#floatingClearButton {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  gap: 8px; 
+  z-index: 5200;
+  background-color: #1133AF;
+  color: white;
+  border: 1px solid rgba(0,0,0,0.3);
+  border-radius: 25px;
+  padding: 8px 16px;
+  font-size: 16px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+  display: none; /* Hidden by default */
+  align-items: center;
+}
+
+/* Ensure icon/text align nicely in the clear button */
+#floatingClearButton i.material-symbols-outlined,
+#floatingClearButton .material-icons {
+  margin-right: 8px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* "Go to my location" button */
+#goToLocationButton {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 5200;
+  background-color: #ffffff;
+  color: #1133AF;
+  border: 1px solid rgba(0,0,0,0.3);
+  border-radius: 50%;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+  cursor: pointer;
+}
+
+#goToLocationButton:hover {
+  background-color: #eef2ff;
+}
+
+#goToLocationButton:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+#goToLocationButton i.material-symbols-outlined {
+  font-size: 22px;
+  line-height: 1;
+}
+
+/*
+  Highlights the active element in the Intro.js tour with a red outline and glow.
+*/
+.introjs-showElement {
+  outline: 3px solid red;
+  outline-offset: 3px;
+  box-shadow: 0 0 0 6px rgba(255, 0, 0, 0.3);
+  z-index: 42;
+  
+}
+
+.introjs-overlay {
+  pointer-events: none;
+}
+
+
+@keyframes pulse-focus-ring {
+  0% {
+    box-shadow:
+      0 0 0 6px rgba(255, 0, 0, 0.35),
+      0 0 0 12px rgba(255, 0, 0, 0.15);
+  }
+  50% {
+    box-shadow:
+      0 0 0 8px rgba(255, 0, 0, 0.55),
+      0 0 0 18px rgba(255, 0, 0, 0.10);
+  }
+  100% {
+    box-shadow:
+      0 0 0 6px rgba(255, 0, 0, 0.35),
+      0 0 0 12px rgba(255, 0, 0, 0.15);
+  }
+}
+
+.custom-highlight {
+  outline: 3px solid red;
+  outline-offset: 3px;
+  /* Pulse the outer glow to draw attention without obscuring */
+  animation: pulse-focus-ring 1.6s ease-in-out infinite;
+  /* Fallback initial shadow in case animations are disabled */
+  box-shadow: 0 0 0 6px rgba(255, 0, 0, 0.35);
+  border-radius: 8px; 
+  transition: all 0.3s ease-in-out;
+  z-index: 99999;
+}
+
+/* Screen-reader only utility */
+.sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+/* Styling for the new Valuable Properties Panel */
+#valuable-properties-panel {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  width: 70%;
+  max-width: 350px;
+  max-height: 40vh;
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-radius: 8px;
+  box-shadow: var(--elev-2);
+  z-index: 4002;
+  display: flex;
+  flex-direction: column;
+}
+
+#valuable-properties-panel.hidden {
+  display: none;
+}
+
+/* Match the info-panel's header bar */
+#valuable-properties-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(17, 51, 175, 0.85);
+  color: #fff;
+  height: 24px;
+  padding: 0 6px;
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+  box-shadow: inset 0 -1px 0 rgba(255,255,255,0.12);
+  backdrop-filter: saturate(160%) blur(6px);
+  -webkit-backdrop-filter: saturate(160%) blur(6px);
+  cursor: grab;
+}
+
+.valuable-properties-title {
+  margin: 8px 12px 6px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+/* Infobox status bar */
+#info-panel-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(17, 51, 175, 0.85); /* restore previous translucency */
+  color: #fff;
+  height: 24px; /* ~30% thinner than previous 34px */
+  padding: 0 4px;
+  border-top-left-radius: 12px; /* match panel radius */
+  border-top-right-radius: 12px;
+  /* subtle elevation for bar */
+  box-shadow: inset 0 -1px 0 rgba(255,255,255,0.12);
+  backdrop-filter: saturate(160%) blur(6px);
+  -webkit-backdrop-filter: saturate(160%) blur(6px);
+}
+
+.info-bar-btn {
+  background: transparent;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  width: 26px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+}
+.info-bar-btn i.material-symbols-outlined { font-size: 18px; line-height: 1; }
+.info-bar-btn:hover { background: rgba(255,255,255,0.12); }
+.info-bar-btn[disabled] {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.info-bar-close {
+  margin-left: auto;
+  font-size: 18px;
+}
+
+
+#valuable-properties-list {
+  overflow-y: auto;
+  padding: 5px;
+}
+
+.valuable-item {
+  display: grid;
+  grid-template-columns: 20px max-content 1fr;
+  gap: 15px;
+  align-items: center;
+  padding: 8px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.valuable-item:hover {
+  background-color: rgba(0, 0, 0, 0.08);
+}
+
+.valuable-item .status-circle {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1px solid black;
+}
+
+.valuable-item .price {
+  font-weight: 600;
+  text-align: right;
+  font-family: monospace;
+  white-space: nowrap;
+}
+
+.valuable-item .address {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+
+/* ALL MOBILE STYLES (for screens 991px or smaller) */
+@media (max-width: 991px) {
+
+  /* --- Layout & Visibility --- */
+
+  /* Hide desktop controls on mobile */
+  body > #mapControls,
+  body > #legendBox {
+    display: none;
+  }
+
+  /* --- Header Elements & Safe Area Fix --- */
+
+  /* 1. Position the hamburger button safely from the corner and the notch */
+  .custom-hamburger-btn {
+    position: fixed;
+    top: calc(10px + env(safe-area-inset-top)); /* Adds notch height */
+    left: 10px;
+  }
+
+  /* 2. Position the logo safely, also accounting for the notch */
+  #logoContainer {
+    position: fixed; /* Ensures it's positioned relative to the viewport */
+    top: calc(10px + env(safe-area-inset-top)); /* Adds notch height */
+    right: 10px;
+    left: auto;
+    bottom: auto;
+    z-index: 1250;
+  }
+
+  #logoContainer img {
+    width: 100px;
+  }
+
+  /* 3. Adjust the header title to sit correctly between the burger and logo */
+  #headerContainer {
+    position: fixed; /* Ensures it's positioned relative to the viewport */
+    top: calc(12px + env(safe-area-inset-top)); /* Adds notch height */
+    left: 65px;     /* Position to the right of the hamburger */
+    right: 110px;    /* Add a right offset to prevent overlap with the logo */
+    padding-left: 0;
+    text-align: center; /* Better alignment on mobile */
+  }
+
+  /* --- Off-Canvas Menu (.mobileControlsContainer) Styles --- */
+  
+  #mobileControlsContainer {
+    font-size: 0.8em;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  /* Reset map controls to fit inside the off-canvas panel */
+  #mobileControlsContainer #mapControls {
+    position: static;
+    width: 100%;
+    background: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border: none;
+    box-shadow: none;
+    margin-left: auto;
+    margin-right: auto;
+    margin-top: 5vh; /* Pushes controls down from the top */
+    margin-bottom: auto; /* Pushes legend box away */
+  }
+  
+  /* Increase tap area for action buttons */
+  #mobileControlsContainer #action-buttons-container button {
+    padding: 15px 0;
+  }
+
+  #mobileControlsContainer > #legendBox {
+    margin-bottom: 5vh; /* Pushes legend up from the bottom */
+  }
+
+  /* --- Legend Styles for Off-Canvas --- */
+
+  /* Reset legend for the off-canvas panel */
+  #legendBox {
+    font-size: 0.8em;
+    background: none;
+    border: none;
+    box-shadow: none;
+    padding: 0;
+    margin: 0;
+    position: static;
+    width: auto;
+    margin-bottom: 10px;
+  }
+
+  #legendBox h4 {
+    display: none; /* Hide unnecessary legend title on mobile */
+  }
+  /* Keep a small collapse affordance visible on mobile */
+  #legendToggle {
+    display: inline-block;
+    margin-left: auto;
+  }
+
+  /* Adjust legend item spacing */
+  #mobileControlsContainer .legend-item,
+  .legend-item {
+    padding: 0.5em 0;
+    line-height: 1.5;
+  }
+
+  /* --- Footer --- */
+
+  #footerVersion {
+    width: 90%;
+    right: auto;
+    left: 50%;
+    transform: translateX(-50%);
+    text-align: center;
+  }
+}
+
+
+/* Shorten title for phone portrait mode */
+/* Hide the page title container entirely on mobile (all orientations) */
+@media (max-width: 991px) {
+  #headerContainer { display: none; }
+}
+
+@media (max-width: 991px) and (orientation: portrait) {
+  /* Hide the title container entirely on small portrait screens */
+  #headerContainer { display: none; }
+
+
+    /* --- Move Logo to Top-Right of Off-Canvas Menu --- */
+
+  /* 1. Hide the main page logo when the menu is open */
+  .offcanvas.show ~ #logoContainer {
+    visibility: hidden;
+  }
+
+  /* 2. Reposition the footer container (which holds the logo) for mobile view */
+  .offcanvas-footer {
+    /* This overrides the default bottom-left positioning on mobile ONLY */
+    top: 0.75rem;
+    right: 1rem;
+    bottom: auto;
+    left: auto;
+    padding: 0;
+  }
+
+  /* 3. Resize the logo image for mobile view */
+  .offcanvas-footer img {
+    width: 50px;
+  }
+
+}
+
+/* A semi-transparent background overlay */
+.toast-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 9999;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+/* The message box, now centered */
+.tutorial-exit-toast {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%); /* This centers the element */
+  background-color: #fff;
+  color: #333;
+  padding: 20px 40px 20px 20px; /* More padding on the right for the close button */
+  border-radius: 5px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+  z-index: 10000;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  max-width: 400px;
+  width: 90%;
+  text-align: center;
+}
+
+/* Class to trigger the fade-in effect */
+.toast-overlay.visible,
+.tutorial-exit-toast.visible {
+  opacity: 1;
+}
+
+/* The 'X' close button */
+.toast-close-btn {
+  position: absolute;
+  top: 5px;
+  right: 10px;
+  background: none;
+  border: none;
+  font-size: 24px;
+  font-weight: bold;
+  color: #888;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+.toast-close-btn:hover {
+  color: #000;
+}
+
+.tutorial-blocked-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  background: #1133AF;
+  color: #fff;
+  padding: 10px 16px;
+  border-radius: 16px;
+  font-size: 14px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+  z-index: 10002;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  text-align: center;
+  max-width: min(90vw, 480px);
+  pointer-events: none;
+}
+
+.tutorial-blocked-toast.visible {
+  opacity: 1;
+}
+
+
+/* (a) disable page scrolling & rubber-band overscroll */
+body.no-page-scroll {
+  overflow: hidden;            /* no page‐scrollbars */
+  height: 100vh;               /* make sure it can’t overshoot */
+  overscroll-behavior: none;   /* no “elastic” bounce */
+}
+
+/* (b) allow the panel itself to scroll */
+#info-panel-content {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 10px 16px 16px;  /* provide spacing for content since panel has 0 padding */
+  background: rgba(255, 255, 255, 0.65);   /* move frosted effect to content only */
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom-left-radius: 12px;
+  border-bottom-right-radius: 12px;
+}
+
+/* (c) trap any wheel events over the map so they never scroll the page */
+#map {
+  overscroll-behavior: contain;
+}
+
+/*
+  This rule disables the default Intro.js highlight. We are using our own
+  'custom-highlight' class instead, which gives us full control. This prevents
+  unwanted boxes from appearing around invisible anchor elements.
+*/
+.introjs-showElement {
+  outline: none !important;
+  box-shadow: none !important;
+}
+.introjs-helperLayer {
+  display: none !important;
+}
+
+.introjs-tooltip {
+  border: 2px solid #1133AF;
+  overflow: visible !important;
+}
+
+.introjs-disclaimer-tooltip {
+  max-width: 720px !important;
+  width: min(90vw, 640px);
+  padding: 24px 28px;
+  border-radius: 18px;
+}
+
+.introjs-disclaimer-tooltip .introjs-tooltiptext {
+  font-size: 1.05rem;
+  line-height: 1.6;
+}
+
+.introjs-disclaimer-tooltip .introjs-arrow {
+  display: none;
+}
+
+.tutorial-skip-highlight {
+  outline: 3px solid #ff2b2b;
+  outline-offset: 3px;
+  box-shadow: 0 0 0 4px rgba(255, 43, 43, 0.35);
+  border-radius: 6px;
+}
+
+#legend-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  background: transparent; /* Remove blue bar */
+  color: inherit;
+  height: 24px;  /* stable height for vertical centering */
+  padding: 0;
+}
+
+/* Make the legend minimise/maximise button visible on light background */
+#legendMinToggle {
+  color: #1133AF; /* brand blue icon */
+}
+
+/* --- Mobile legend spacing override (after all base rules) --- */
+@media (max-width: 991px) {
+  #legendBox .legend-item {
+    font-size: 1.8em;    /* keep larger text */
+    line-height: 1.15;   /* tighter lines */
+    padding: 0.2em 0;    /* reduce vertical padding (overrides 0.5em 0) */
+    margin-bottom: 2px;  /* small residual gap */
+  }
+}
+
+/* Keyboard help overlay */
+#help-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  z-index: 4005;
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+#help-overlay .help-content {
+  background: #fff;
+  color: #333;
+  padding: var(--space-4);
+  border-radius: 8px;
+  box-shadow: var(--elev-2);
+  max-width: 420px;
+  width: 90%;
+  position: relative;
+}
+#help-overlay .help-content h3 { margin-top: 0; }
+#help-overlay .help-content ul { margin: 0 0 var(--space-2) var(--space-3); }
+#help-overlay .help-content li { margin: var(--space-1) 0; }
+#help-close {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+#help-overlay.show { display: flex; }
+
+/* Reuse overlay styles for nudges */
+#kb-nudge-overlay, #nav-nudge-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.35);
+  z-index: 4005;
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+#kb-nudge-overlay.show, #nav-nudge-overlay.show { display: flex; }
+
+/* Ensure nudge overlays have the same content box styling */
+#kb-nudge-overlay .help-content,
+#nav-nudge-overlay .help-content {
+  background: #fff;
+  color: #333;
+  padding: var(--space-4);
+  border-radius: 8px;
+  box-shadow: var(--elev-2);
+  max-width: 420px;
+  width: 90%;
+  position: relative;
+}
+#kb-nudge-overlay .help-content h3,
+#nav-nudge-overlay .help-content h3 { margin-top: 0; }
+#kb-nudge-overlay .help-content ul,
+#nav-nudge-overlay .help-content ul { margin: 0 0 var(--space-2) var(--space-3); }
+#kb-nudge-overlay .help-content li,
+#nav-nudge-overlay .help-content li { margin: var(--space-1) 0; }
+#kb-nudge-close, #nav-nudge-close {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+/* Design tokens */
+:root {
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --brand-blue: #1133AF;
+  --elev-1: 0 4px 12px rgba(0,0,0,0.15);
+  --elev-2: 0 8px 32px rgba(31,38,135,0.37);
+}
+
+/* Auth pages (login/register) */
+body.auth-page {
+  height: auto;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px 40px;
+  color: #1a202c;
+  user-select: text;
+  background:
+    radial-gradient(circle at 12% 18%, rgba(17, 51, 175, 0.18), transparent 55%),
+    radial-gradient(circle at 85% 85%, rgba(17, 51, 175, 0.12), transparent 55%),
+    linear-gradient(135deg, #f2f5fb 0%, #f7f9fc 55%, #eef2f7 100%);
+}
+
+body.auth-page,
+body.auth-page * ,
+body.auth-page *::before,
+body.auth-page *::after {
+  box-sizing: border-box;
+}
+
+.auth-shell {
+  width: 100%;
+  max-width: 960px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+}
+
+.auth-logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
+.auth-logo img {
+  width: 180px;
+  height: auto;
+  border-radius: 10px;
+  box-shadow: 0 12px 24px rgba(17, 51, 175, 0.18);
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 420px;
+  margin: 0 auto;
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(17, 51, 175, 0.15);
+  border-radius: 18px;
+  padding: 28px 28px 24px;
+  box-shadow: var(--elev-2);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  position: relative;
+  overflow: hidden;
+}
+
+.auth-card::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 4px;
+  width: 100%;
+  background: linear-gradient(90deg, #1133AF 0%, #4b6bff 45%, #0ea5e9 100%);
+}
+
+.auth-header {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.auth-eyebrow {
+  margin: 0;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(17, 51, 175, 0.7);
+  font-weight: 600;
+}
+
+.auth-title {
+  margin: 0;
+  font-size: 1.6rem;
+  font-weight: 600;
+}
+
+.auth-subtitle {
+  margin: 0;
+  color: #4a5568;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.auth-terms {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.auth-terms-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.auth-terms-row input[type="checkbox"] {
+  margin-top: 3px;
+}
+
+.auth-terms-row label {
+  font-size: 0.85rem;
+  color: #4a5568;
+  line-height: 1.4;
+}
+
+.auth-terms-row input[type="checkbox"]:disabled + label {
+  color: rgba(74, 85, 104, 0.55);
+}
+
+.auth-secondary-btn {
+  align-self: flex-start;
+  padding: 9px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(17, 51, 175, 0.3);
+  background: rgba(17, 51, 175, 0.08);
+  color: #0f2f96;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.auth-secondary-btn:hover {
+  background: rgba(17, 51, 175, 0.15);
+  border-color: rgba(17, 51, 175, 0.45);
+  transform: translateY(-1px);
+}
+
+.auth-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.auth-field label {
+  font-size: 0.85rem;
+  color: #4a5568;
+  font-weight: 600;
+}
+
+.auth-field input {
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(15, 23, 42, 0.15);
+  background: rgba(255, 255, 255, 0.95);
+  font-size: 1rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.auth-field input:focus {
+  border-color: var(--brand-blue);
+  box-shadow: 0 0 0 3px rgba(17, 51, 175, 0.18);
+  outline: none;
+}
+
+.auth-primary-btn {
+  margin-top: 4px;
+  padding: 12px 16px;
+  border: none;
+  border-radius: 10px;
+  background: var(--brand-blue);
+  color: #fff;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.2s ease;
+}
+
+.auth-primary-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 20px rgba(17, 51, 175, 0.25);
+  background: #0e2d99;
+}
+
+.auth-primary-btn[disabled] {
+  background: #cbd5f5;
+  color: rgba(15, 23, 42, 0.55);
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+.auth-footer {
+  margin: 16px 0 0;
+  color: #4a5568;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.auth-link {
+  color: var(--brand-blue);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.auth-link:hover {
+  text-decoration: underline;
+}
+
+.auth-note {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.75rem;
+  text-align: center;
+  width: 100%;
+  max-width: 420px;
+  padding: 0 12px;
+}
+
+body.auth-modal-open {
+  overflow: hidden;
+}
+
+.terms-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  z-index: 5000;
+}
+
+.terms-modal.show {
+  display: flex;
+}
+
+.terms-card {
+  width: min(860px, 100%);
+  max-height: min(80vh, 640px);
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: var(--elev-2);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid rgba(17, 51, 175, 0.12);
+}
+
+.terms-header {
+  padding: 18px 22px 12px;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+  background: rgba(17, 51, 175, 0.06);
+}
+
+.terms-header h2 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.terms-content {
+  padding: 18px 22px;
+  overflow-y: auto;
+  font-size: 0.92rem;
+  line-height: 1.55;
+  color: #1f2937;
+  white-space: normal;
+}
+
+.terms-content.is-plain {
+  white-space: pre-wrap;
+}
+
+.terms-content h2 {
+  margin: 0 0 12px;
+  font-size: 1.25rem;
+}
+
+.terms-content h3 {
+  margin: 18px 0 8px;
+  font-size: 1.05rem;
+}
+
+.terms-content h4 {
+  margin: 14px 0 6px;
+  font-size: 0.98rem;
+}
+
+.terms-content p {
+  margin: 0 0 10px;
+}
+
+.terms-content ul,
+.terms-content ol {
+  margin: 0 0 12px 20px;
+  padding: 0;
+}
+
+.terms-content li {
+  margin: 6px 0;
+}
+
+.terms-content a {
+  color: var(--brand-blue);
+  text-decoration: underline;
+}
+
+.terms-actions {
+  padding: 14px 22px 18px;
+  border-top: 1px solid rgba(15, 23, 42, 0.08);
+  display: flex;
+  justify-content: flex-end;
+}
+
+.terms-agree-btn {
+  padding: 10px 18px;
+  border-radius: 10px;
+  border: none;
+  background: var(--brand-blue);
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.terms-agree-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 16px rgba(17, 51, 175, 0.25);
+}
+
+.terms-agree-btn[disabled] {
+  background: #cbd5f5;
+  color: rgba(15, 23, 42, 0.55);
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+@media (max-width: 640px) {
+  .auth-card {
+    padding: 24px 20px 22px;
+  }
+
+  .auth-logo img {
+    width: 150px;
+  }
+
+  .terms-card {
+    max-height: 82vh;
+  }
+}
+
+@media (max-width: 480px) {
+  .auth-card {
+    width: 100%;
+    max-width: 340px;
+  }
+}
+
+/* High-z pane for Scotland/NI no-data markers */
+.leaflet-pane.no-data-pane {
+  z-index: 650; /* above markers (600), below popups (700) */
+  pointer-events: auto;
+}
+
+/* Center the no-data icon exactly on its LatLng */
+/* Anchor the badge center to the marker's map coordinate */
+.leaflet-pane.no-data-pane .no-data-icon { }
+
+/* Elegant, prominent question mark badge */
+.no-data-badge {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform: translate(-50%, -50%);
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.95);
+  border: 3px solid var(--brand-blue);
+  color: var(--brand-blue);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 36px;
+  line-height: 1;
+  box-shadow: 0 8px 24px rgba(17, 51, 175, 0.25), 0 2px 8px rgba(0, 0, 0, 0.15);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  cursor: pointer;
+  user-select: none;
+}
+
+.no-data-badge:hover,
+.no-data-badge:active { 
+  /* Preserve centering while adding a small lift */
+  transform: translate(-50%, -50%) translateY(-1px);
+  box-shadow: 0 10px 28px rgba(17, 51, 175, 0.30), 0 3px 10px rgba(0, 0, 0, 0.18);
+}
+
+.no-data-badge:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px #fff, 0 0 0 5px var(--brand-blue);
+}
+
+/* Optional: nicer popup text for the no-data markers */
+.no-data-popup .leaflet-popup-content {
+  font-family: 'Poppins', sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.property-highlight-ring {
+  stroke-opacity: 0.9;
+}

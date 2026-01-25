@@ -1,0 +1,146 @@
+incorporated
+limited company
+public limited company
+private limited company
+limited
+ltd
+plc
+inc
+corp
+corporation
+co
+company
+holdings
+group
+llc
+lllp
+llp
+lp
+gp
+pc
+pllc
+ulc
+cic
+gesellschaft mit beschränkter haftung
+gmbh
+ug haftungsbeschränkt
+ag
+se
+ev
+eg
+kgaa
+societe a responsabilite limitee
+societe anonyme
+sociedad anonima
+sociedad anónima
+sociedad limitada
+sociedad por acciones simplificada
+sarl
+sa
+sas
+sasu
+eurl
+sca
+scop
+srl
+srls
+srlu
+sl
+slne
+spa
+bv
+bvba
+nv
+sprl
+ab
+oy
+oyj
+as
+asa
+sci
+aps
+oü
+ou
+spolka z ograniczona odpowiedzialnoscia
+spółka z ograniczoną odpowiedzialnością
+spolka akcyjna
+spółka akcyjna
+sp z oo
+z oo
+sro
+doo
+dooel
+ad
+ead
+ood
+kft
+zrt
+rt
+lda
+ltda
+sociedade anonima
+sociedade anónima
+sociedade por quotas
+ae
+epe
+anonim sirket
+anonim şirket
+limited sirket
+limited şirket
+ooo
+oao
+zao
+ao
+pjsc
+psc
+fze
+SCPI
+wll
+UNIPERSONAL
+free zone establishment
+pvt
+pvt ltd
+london branch
+uk branch
+pte
+pte ltd
+PTE.LTD
+pteltd
+sdn bhd
+aktiengesellschaft
+bhd
+berhad
+sendirian berhad
+pty
+pty ltd
+kabushiki kaisha
+kk
+godo kaisha
+gk
+yugen kaisha
+yk
+joint stock company
+common stock
+jsc
+sa de cv
+s de rl
+s de rl de cv
+sas
+sas colombia
+eireli
+icc
+spc
+segregated portfolio company
+foundation
+stiftung
+anstalt
+class
+series
+unit
+units
+unt
+voting
+vtg
+preferred
+ord
+reit

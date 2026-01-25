@@ -1,0 +1,148 @@
+{
+  "_ids": {
+    "0": "ownership-of-shares-more-than-25-percent-as-control-over-firm-registered-overseas-entity",
+    "1": "ownership-of-shares-more-than-25-percent-as-control-over-trust-registered-overseas-entity",
+    "10": "right-to-appoint-and-remove-directors-as-control-over-trust-registered-overseas-entity",
+    "11": "right-to-appoint-and-remove-directors-as-firm-registered-overseas-entity",
+    "12": "right-to-appoint-and-remove-directors-as-trust-registered-overseas-entity",
+    "13": "right-to-appoint-and-remove-directors-registered-overseas-entity",
+    "14": "significant-influence-or-control-as-control-over-firm-registered-overseas-entity",
+    "15": "significant-influence-or-control-as-control-over-trust-registered-overseas-entity",
+    "16": "significant-influence-or-control-as-firm-registered-overseas-entity",
+    "17": "significant-influence-or-control-as-trust-registered-overseas-entity",
+    "18": "significant-influence-or-control-registered-overseas-entity",
+    "19": "voting-rights-more-than-25-percent-as-control-over-firm-registered-overseas-entity",
+    "2": "ownership-of-shares-more-than-25-percent-as-firm-registered-overseas-entity",
+    "20": "voting-rights-more-than-25-percent-as-control-over-trust-registered-overseas-entity",
+    "21": "voting-rights-more-than-25-percent-as-firm-registered-overseas-entity",
+    "22": "voting-rights-more-than-25-percent-as-trust-registered-overseas-entity",
+    "23": "voting-rights-more-than-25-percent-registered-overseas-entity",
+    "3": "ownership-of-shares-more-than-25-percent-as-trust-registered-overseas-entity",
+    "4": "ownership-of-shares-more-than-25-percent-registered-overseas-entity",
+    "5": "registered-owner-as-nominee-another-entity-england-wales-registered-overseas-entity",
+    "6": "registered-owner-as-nominee-another-entity-scotland-registered-overseas-entity",
+    "7": "registered-owner-as-nominee-person-england-wales-registered-overseas-entity",
+    "8": "registered-owner-as-nominee-person-scotland-registered-overseas-entity",
+    "9": "right-to-appoint-and-remove-directors-as-control-over-firm-registered-overseas-entity"
+  },
+  "ownership-of-shares-more-than-25-percent-as-control-over-firm-registered-overseas-entity": {
+    "description": "Has significant influence over a firm which holds more than 25% of the shares in the entity",
+    "icon": "finance_mode",
+    "id": 0
+  },
+  "ownership-of-shares-more-than-25-percent-as-control-over-trust-registered-overseas-entity": {
+    "description": "Has significant influence over a trust which holds more than 25% of the shares in the entity",
+    "icon": "finance_mode",
+    "id": 1
+  },
+  "ownership-of-shares-more-than-25-percent-as-firm-registered-overseas-entity": {
+    "description": "Ownership of shares - More than 25% as a member of a firm",
+    "icon": "finance_mode",
+    "id": 2
+  },
+  "ownership-of-shares-more-than-25-percent-as-trust-registered-overseas-entity": {
+    "description": "Ownership of shares - More than 25% as trustees of a trust",
+    "icon": "approval",
+    "id": 3
+  },
+  "ownership-of-shares-more-than-25-percent-registered-overseas-entity": {
+    "description": "Ownership of shares - More than 25%",
+    "icon": "finance_mode",
+    "id": 4
+  },
+  "registered-owner-as-nominee-another-entity-england-wales-registered-overseas-entity": {
+    "description": "Overseas Entity holds land or property in England and Wales as a nominee for another entity for which this person is the registered beneficial owner",
+    "icon": "person_pin_circle",
+    "id": 5
+  },
+  "registered-owner-as-nominee-another-entity-scotland-registered-overseas-entity": {
+    "description": "Overseas Entity holds land or property in Scotland as a nominee for another entity for which this person is the registered beneficial owner",
+    "icon": "person_pin_circle",
+    "id": 6
+  },
+  "registered-owner-as-nominee-person-england-wales-registered-overseas-entity": {
+    "description": "Overseas Entity holds land or property in England and Wales as a nominee for this person",
+    "icon": "person_pin_circle",
+    "id": 7
+  },
+  "registered-owner-as-nominee-person-scotland-registered-overseas-entity": {
+    "description": "Overseas Entity holds land or property in Scotland, as nominee for this person",
+    "icon": "person_pin_circle",
+    "id": 8
+  },
+  "right-to-appoint-and-remove-directors-as-control-over-firm-registered-overseas-entity": {
+    "description": "Has significant influence over a firm which has the right to appoint or remove directors of the entity",
+    "icon": "accessibility_new",
+    "id": 9
+  },
+  "right-to-appoint-and-remove-directors-as-control-over-trust-registered-overseas-entity": {
+    "description": "Has significant influence over a trust which has the right to appoint or remove directors of the entity",
+    "icon": "accessibility_new",
+    "id": 10
+  },
+  "right-to-appoint-and-remove-directors-as-firm-registered-overseas-entity": {
+    "description": "Right to appoint or remove members as a member of a firm",
+    "icon": "accessibility_new",
+    "id": 11
+  },
+  "right-to-appoint-and-remove-directors-as-trust-registered-overseas-entity": {
+    "description": "Right to appoint or remove directors as the trustees of a trust",
+    "icon": "approval",
+    "id": 12
+  },
+  "right-to-appoint-and-remove-directors-registered-overseas-entity": {
+    "description": "Right to appoint or remove directors",
+    "icon": "accessibility_new",
+    "id": 13
+  },
+  "significant-influence-or-control-as-control-over-firm-registered-overseas-entity": {
+    "description": "Has significant influence over a firm which controls the entity",
+    "icon": "joystick",
+    "id": 14
+  },
+  "significant-influence-or-control-as-control-over-trust-registered-overseas-entity": {
+    "description": "Has significant influence over a trust which has control of the entity",
+    "icon": "joystick",
+    "id": 15
+  },
+  "significant-influence-or-control-as-firm-registered-overseas-entity": {
+    "description": "Has significant influence or control as a member of a firm",
+    "icon": "joystick",
+    "id": 16
+  },
+  "significant-influence-or-control-as-trust-registered-overseas-entity": {
+    "description": "Has significant influence over the entity as the trustees of a trust",
+    "icon": "approval",
+    "id": 17
+  },
+  "significant-influence-or-control-registered-overseas-entity": {
+    "description": "Has significant influence or control",
+    "icon": "joystick",
+    "id": 18
+  },
+  "voting-rights-more-than-25-percent-as-control-over-firm-registered-overseas-entity": {
+    "description": "Has significant influence over a firm which has more than 25% of the voting rights in the entity",
+    "icon": "how_to_vote",
+    "id": 19
+  },
+  "voting-rights-more-than-25-percent-as-control-over-trust-registered-overseas-entity": {
+    "description": "Has significant influence over a trust which holds more than 25% of the voting rights in the entity",
+    "icon": "how_to_vote",
+    "id": 20
+  },
+  "voting-rights-more-than-25-percent-as-firm-registered-overseas-entity": {
+    "description": "Ownership of voting rights - More than 25% as a member of a firm",
+    "icon": "how_to_vote",
+    "id": 21
+  },
+  "voting-rights-more-than-25-percent-as-trust-registered-overseas-entity": {
+    "description": "Holds voting rights - More than 25% as trustees of a trust",
+    "icon": "approval",
+    "id": 22
+  },
+  "voting-rights-more-than-25-percent-registered-overseas-entity": {
+    "description": "Ownership of voting rights - More than 25%",
+    "icon": "how_to_vote",
+    "id": 23
+  }
+}

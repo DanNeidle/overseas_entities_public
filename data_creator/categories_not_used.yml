@@ -1,0 +1,35 @@
+not_registered:
+  description: Proprietor not registered
+  colour: grey
+  colour_rgb: #939699
+  legend: Failed to register
+  
+no_bo:
+  description: No beneficial owner declared
+  colour: orange
+  colour_rgb: #DD8452
+  legend: No beneficial owner
+
+hidden:
+  description: True beneficial owner hidden
+  colour: red
+  colour_rgb: #C44E52
+  legend: Ownership hidden
+
+trust_proprietor:
+  description: Trust proprietor
+  colour: blue
+  colour_rgb: #4C72B0
+  legend: Trust proprietor
+
+only_trustees:
+  description: Only trustees listed as beneficial owners
+  colour: blue
+  colour_rgb: #4C72B0
+  legend: Only trustees listed
+
+ok:
+  description: Ownership properly disclosed
+  colour: green
+  colour_rgb: #6ACC64
+  legend: Identifiable owner

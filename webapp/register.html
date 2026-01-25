@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Who secretly owns Britain?</title>
+    <link rel="apple-touch-icon" href="https://taxpolicy.org.uk/wp-content/assets/logo_emblem_on_blue.png">
+    <link rel="shortcut icon" type="image/png" href="https://taxpolicy.org.uk/wp-content/assets/logo_emblem_on_blue.jpg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="overseas_entities_map.css">
+</head>
+<body class="auth-page">
+    <main class="auth-shell">
+        <a class="auth-logo" href="https://taxpolicy.org.uk/who-owns-britain-map/" aria-label="Tax Policy Associates">
+            <img src="https://taxpolicy.org.uk/wp-content/assets/logo_full_white_on_blue.jpg" alt="Tax Policy Associates Logo">
+        </a>
+        <section class="auth-card" aria-labelledby="register-title">
+            <header class="auth-header">
+                <p class="auth-eyebrow">Who secretly owns Britain?</p>
+                <h1 id="register-title" class="auth-title">Create your account</h1>
+                <p class="auth-subtitle">HM Land Registry licence terms require that all users are registered and that we log IP addresses of users.</p>
+            </header>
+            <form id="regForm" class="auth-form">
+                <div class="auth-field">
+                    <label for="name">Full name</label>
+                    <input type="text" id="name" name="name" autocomplete="name" placeholder="Jane Doe" required>
+                </div>
+                <div class="auth-field">
+                    <label for="email">Email address</label>
+                    <input type="email" id="email" name="email" autocomplete="email" placeholder="you@example.com" required>
+                </div>
+                <div class="auth-field">
+                    <label for="password">Choose a password</label>
+                    <input type="password" id="password" name="password" autocomplete="new-password" placeholder="Create a password" required>
+                </div>
+                <div class="auth-terms">
+                    <button type="button" class="auth-secondary-btn" id="reviewTermsBtn">Review terms of use</button>
+                    <div class="auth-terms-row">
+                        <input type="checkbox" id="agreeTerms" disabled>
+                        <label for="agreeTerms">I agree to the terms of use</label>
+                    </div>
+                </div>
+                <button type="submit" class="auth-primary-btn" id="registerButton" disabled>Register</button>
+            </form>
+            <p class="auth-footer">Already have an account? <a class="auth-link" href="login.html">Login here</a></p>
+        </section>
+        <p class="auth-note">Webapp and data analysis © Tax Policy Associates, 2026. Underlying land registry data produced by HM Land Registry © Crown copyright 2026</p>
+    </main>
+
+    <div class="terms-modal" id="termsModal" role="dialog" aria-modal="true" aria-labelledby="termsTitle" aria-hidden="true">
+        <div class="terms-card" role="document">
+            <div class="terms-header">
+                <h2 id="termsTitle">Terms of Use & Privacy Notice</h2>
+            </div>
+            <div class="terms-content" id="termsContent" tabindex="0">Loading terms...</div>
+            <div class="terms-actions">
+                <button type="button" class="terms-agree-btn" id="termsAgreeBtn" disabled>I agree</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const termsModal = document.getElementById('termsModal');
+        const reviewTermsBtn = document.getElementById('reviewTermsBtn');
+        const termsAgreeBtn = document.getElementById('termsAgreeBtn');
+        const termsContent = document.getElementById('termsContent');
+        const agreeTerms = document.getElementById('agreeTerms');
+        const registerButton = document.getElementById('registerButton');
+        let termsLoaded = false;
+
+        const openTermsModal = () => {
+            termsModal.classList.add('show');
+            termsModal.setAttribute('aria-hidden', 'false');
+            document.body.classList.add('auth-modal-open');
+        };
+
+        const closeTermsModal = () => {
+            termsModal.classList.remove('show');
+            termsModal.setAttribute('aria-hidden', 'true');
+            document.body.classList.remove('auth-modal-open');
+        };
+
+        const updateRegisterState = () => {
+            registerButton.disabled = !agreeTerms.checked;
+        };
+
+        const hasReachedTermsBottom = () => (
+            termsContent.scrollTop + termsContent.clientHeight >= termsContent.scrollHeight - 4
+        );
+
+        const updateTermsAgreeState = () => {
+            termsAgreeBtn.disabled = !hasReachedTermsBottom();
+        };
+
+        reviewTermsBtn.addEventListener('click', async () => {
+            openTermsModal();
+            termsContent.scrollTop = 0;
+            termsAgreeBtn.disabled = true;
+            if (termsLoaded) {
+                requestAnimationFrame(updateTermsAgreeState);
+                return;
+            }
+
+            termsContent.textContent = 'Loading terms...';
+            termsContent.classList.add('is-plain');
+            try {
+                const res = await fetch('terms_of_use.html', { cache: 'no-store' });
+                if (!res.ok) throw new Error('Failed to load terms');
+                const text = await res.text();
+                const looksLikeHtml = /<\/?[a-z][\s\S]*>/i.test(text);
+                if (looksLikeHtml) {
+                    const doc = new DOMParser().parseFromString(text, 'text/html');
+                    const bodyHtml = doc.body ? doc.body.innerHTML.trim() : '';
+                    termsContent.innerHTML = bodyHtml || text;
+                    termsContent.classList.remove('is-plain');
+                } else {
+                    termsContent.textContent = text;
+                    termsContent.classList.add('is-plain');
+                }
+                termsLoaded = true;
+                requestAnimationFrame(updateTermsAgreeState);
+            } catch (err) {
+                termsContent.textContent = 'Unable to load terms of use. Please try again.';
+                termsContent.classList.add('is-plain');
+                requestAnimationFrame(updateTermsAgreeState);
+            }
+        });
+
+        termsAgreeBtn.addEventListener('click', () => {
+            closeTermsModal();
+            agreeTerms.disabled = false;
+            agreeTerms.focus();
+            updateRegisterState();
+        });
+
+        agreeTerms.addEventListener('change', updateRegisterState);
+        termsContent.addEventListener('scroll', updateTermsAgreeState);
+
+        document.getElementById('regForm').onsubmit = async (e) => {
+            e.preventDefault();
+            if (!agreeTerms.checked) {
+                alert("Please review and accept the terms of use before registering.");
+                return;
+            }
+            const res = await fetch('./api/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: document.getElementById('name').value,
+                    email: document.getElementById('email').value,
+                    password: document.getElementById('password').value
+                })
+            });
+
+            if (res.ok) {
+                window.location.href = 'index.html';
+            } else {
+                alert("Registration failed. Email might already be in use.");
+            }
+        };
+    </script>
+</body>
+</html>

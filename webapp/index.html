@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Who secretly owns Britain?</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"> <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <!-- Client-side cache control (best-effort). Real cache headers must be set by the server/CDN. -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, max-age=0">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <link rel="apple-touch-icon" href="https://taxpolicy.org.uk/wp-content/assets/logo_emblem_on_blue.png"> <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/intro.js/7.2.0/introjs.min.css" />
+
+  <link rel="stylesheet" href="overseas_entities_map.css"  />
+
+  <link rel="shortcut icon" type="image/png" href="https://taxpolicy.org.uk/wp-content/assets/logo_emblem_on_blue.jpg" /> <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
+  <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.4.4/lz-string.min.js"></script>
+  <script src="lib/localforage.min.js"></script>
+  <script src="lib/msgpack.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/intro.js/7.2.0/intro.min.js"></script>
+
+
+</head>
+<body>
+  <button id="hamburgerBtn" class="btn custom-hamburger-btn d-block d-lg-none position-fixed"
+          type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileControlsOffcanvas" aria-controls="mobileControlsOffcanvas" aria-label="Open menu">
+    <i class="material-symbols-outlined" aria-hidden="true">menu</i>
+  </button>
+
+  <div class="offcanvas offcanvas-start d-lg-none" tabindex="-1" id="mobileControlsOffcanvas" aria-labelledby="mobileControlsLabel">
+    <div class="offcanvas-header">
+      <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body" id="mobileControlsContainer">
+      </div>
+    <div class="offcanvas-footer">
+      <img src="https://taxpolicy.org.uk/wp-content/assets/logo_emblem_on_blue.png" alt="Tax Policy Associates Logo">
+    </div>
+  </div>
+
+  <div id="headerContainer">
+    <div id="pageTitle">Who secretly owns Britain?</div>
+  </div>
+
+  <div id="logoContainer">
+    <a id="logo" href="https://taxpolicy.org.uk/who-owns-britain-map/"> <img src="https://taxpolicy.org.uk/wp-content/assets/logo_full_white_on_blue.jpg" alt="Tax Policy Associates Logo">
+    </a>
+</div>
+
+    <div id="map"></div>
+    
+    <div id="info-panel" class="hidden" role="dialog" aria-modal="true" aria-labelledby="info-panel-title">
+        <div id="info-panel-bar" role="toolbar" aria-label="Property panel controls">
+            <button id="info-back" class="info-bar-btn" aria-label="Back" title="Back" disabled>
+                <i class="material-symbols-outlined" aria-hidden="true">chevron_left</i>
+            </button>
+            <button id="info-forward" class="info-bar-btn" aria-label="Next" title="Next" disabled>
+                <i class="material-symbols-outlined" aria-hidden="true">chevron_right</i>
+            </button>
+            <button id="info-download" class="info-bar-btn" data-action="download-info"
+                    data-tooltip-infopanel="Download data for this property"
+                    aria-label="Download data for this property">
+                <i class="material-symbols-outlined" aria-hidden="true">download</i>
+            </button>
+            <button id="info-close" class="info-bar-btn info-bar-close" aria-label="Close" title="Close">
+                <i class="material-symbols-outlined" aria-hidden="true">close</i>
+            </button>
+        </div>
+        <div id="info-panel-content"></div>
+    </div>
+
+ <div id="mapControls">
+
+  <div id="modeToggleContainer">
+    <button class="mode-toggle-btn active" data-value="properties" data-tooltip="Properties" aria-label="Properties">
+      <i class="material-symbols-outlined" aria-hidden="true">apartment</i>
+    </button>
+    <button class="mode-toggle-btn" data-value="proprietors" data-tooltip="Proprietors" aria-label="Proprietors">
+      <i class="material-symbols-outlined" aria-hidden="true">article</i>
+    </button>
+    <button class="mode-toggle-btn" data-value="beneficial_owners" data-tooltip="Beneficial owners" aria-label="Beneficial owners">
+      <i class="material-symbols-outlined" aria-hidden="true">group</i>
+    </button>
+  </div>
+
+  <div id="propertyTypeSelector" class="property-type-selector" role="radiogroup" aria-label="Filter by property type">
+    <div class="property-type-pills">
+      <button type="button" class="property-type-btn active" data-type="all" data-tooltip="All properties" aria-pressed="true">All</button>
+      <button type="button" class="property-type-btn" data-type="D" data-tooltip="Properties we can identify as detached houses" aria-pressed="false">Detached</button>
+      <button type="button" class="property-type-btn" data-type="S" data-tooltip="Properties we can identify as semi-detached houses" aria-pressed="false">Semi</button>
+      <button type="button" class="property-type-btn" data-type="T" data-tooltip="Properties we can identify as terraced houses" aria-pressed="false">Terraced</button>
+      <button type="button" class="property-type-btn" data-type="F" data-tooltip="Properties we can identify as flats/maisonettes" aria-pressed="false">Flats</button>
+    </div>
+  </div>
+
+  <div class="search-container" id="entitySearchContainer">
+    <div class="input-group">
+      <span class="input-group-text"><i class="material-symbols-outlined" aria-hidden="true">search</i></span>
+      <input type="search" id="searchInput" class="form-control" placeholder="Search proprietors/titles" autocomplete="off" autocapitalize="none" enterkeyhint="search" aria-label="Search entities">
+    </div>
+    <div class="results" id="searchResults" role="listbox" aria-label="Search results"></div>
+  </div>
+
+  <div id="action-buttons-container">
+    <button id="clearButton" data-tooltip="Reset view" aria-label="Reset view">
+      <i class="material-symbols-outlined">refresh</i>
+    </button>
+    <button id="showValuableButton" data-tooltip="Show valuable properties" aria-label="Show highest purchase prices">
+      <i class="material-symbols-outlined" aria-hidden="true">currency_pound</i>
+    </button>
+    <button id="selectAreaButton" data-tooltip="Count properties in area" aria-label="Count properties in area">
+      <i class="material-symbols-outlined" aria-hidden="true">draw</i>
+    </button>
+    <button id="shareViewButton" data-tooltip="Share the current view" aria-label="Share the current view">
+      <i class="material-symbols-outlined" aria-hidden="true">attach_email</i>
+    </button>
+    <button id="reRunTutorialButton" data-tooltip="Show tutorial" aria-label="Show tutorial">
+      <i class="material-symbols-outlined" aria-hidden="true">help_outline</i>
+    </button>
+  </div>
+
+</div>
+
+  <div id="map"></div>
+
+
+  <div id="navigationSearchContainer">
+    <div class="search-container" id="placeSearchContainer">
+        <div class="input-group">
+            <span class="input-group-text"><i class="material-symbols-outlined" aria-hidden="true">search</i></span>
+            <input type="search" id="placeSearchInput" class="form-control" placeholder="Search for places" autocomplete="off" autocapitalize="none" enterkeyhint="search" aria-label="Search for places">
+            </div>
+        <div class="results" id="placeSearchResults" role="listbox" aria-label="Place search results"></div>
+    </div>
+</div>
+
+
+  <div id="loading-overlay" class="loading-overlay">
+    <div class="spinner"></div>
+    
+    <div style="width: 80%; max-width: 400px; background: #555; border-radius: 5px; margin-top: 20px; border: 1px solid #fff;">
+      <div id="progressBar" style="width: 0%; height: 24px; background: #1133AF; border-radius: 5px; text-align: center; color: white; line-height: 24px; font-weight: bold; transition: width 0.2s ease-out;">0%</div>
+    </div>
+    
+    <p id="loading-text" style="margin-top: 15px;">
+      Loading properties...<br>This may take a while, potentially a minute<br>or more if you're on mobile or have a slow connection.
+    </p>
+  </div>
+
+  <div class="custom-legend" id="legendBox">
+    <div id="legend-bar" role="toolbar" aria-label="Legend controls">
+      <button id="legendMinToggle" class="info-bar-btn info-bar-close" aria-label="Minimise legend" title="Minimise legend">
+        <i class="material-symbols-outlined" aria-hidden="true">remove</i>
+      </button>
+    </div>
+    <div class="legend-item" data-category="green" data-active="true" data-tooltip="Click to enable/disable properties with identifiable owners" role="switch" aria-checked="true" tabindex="0" aria-label="Toggle identifiable owner markers">
+      <span class="legend-box" style="background-color:green;"></span>
+      Identifiable owner
+    </div>
+    <div class="legend-item" data-category="orange" data-active="true" data-tooltip="Click to enable/disable no beneficial owner properties" role="switch" aria-checked="true" tabindex="0" aria-label="Toggle no beneficial owner markers">
+      <span class="legend-box" style="background-color:#DD8452;"></span>
+      No beneficial owner
+    </div>
+    <div class="legend-item" data-category="red" data-active="true" data-tooltip="Click to enable/disable suspected hidden ownership properties" role="switch" aria-checked="true" tabindex="0" aria-label="Toggle suspected hidden ownership markers">
+      <span class="legend-box" style="background-color:#C44E52;"></span>
+      Ownership hidden
+    </div>
+    <div class="legend-item" data-category="grey" data-active="true"  data-tooltip="Click to enable/disable properties with unregistered proprietors" role="switch" aria-checked="true" tabindex="0" aria-label="Toggle failed to register markers">
+      <span class="legend-box" style="background-color:#939699;"></span>
+      Failed to register
+    </div>
+    <div class="legend-item" data-category="blue" data-active="true"  data-tooltip="Click to enable/disable properties with only trustee beneficial owners" role="switch" aria-checked="true" tabindex="0" aria-label="Toggle only trustees listed markers">
+      <span class="legend-box" style="background-color:#4C72B0;"></span>
+      Only trustees listed
+    </div>
+    <div class="legend-item" data-category="purple" data-active="true"  data-tooltip="Click to enable/disable properties with sanctioned beneficial owners" role="switch" aria-checked="true" tabindex="0" aria-label="Toggle sanctioned markers">
+      <span class="legend-box" style="background-color:purple;"></span>
+      Sanctioned
+    </div>
+  </div>
+
+  <div id="tour-overlay" class="hidden" role="presentation" aria-hidden="true"></div>
+  <div id="tour-box" class="hidden">
+    <div id="tour-content"></div>
+    <div id="tour-controls">
+      <button id="tour-prev" aria-label="Tutorial back">Back</button>
+      <button id="tour-next" aria-label="Tutorial next">Next</button>
+      <button id="tour-done" aria-label="Tutorial done">Done</button>
+    </div>
+  </div>
+
+  <!-- Keyboard help overlay -->
+  <div id="help-overlay" class="hidden" role="dialog" aria-modal="true" aria-labelledby="help-title">
+    <div class="help-content">
+      <h3 id="help-title">Keyboard Shortcuts</h3>
+      <ul>
+        <li>Left / Right: Navigate infobox history</li>
+        <li>Up / Down: Move selection in search results</li>
+        <li>Home / End: Jump to first / last result</li>
+        <li>Enter: Activate the selected result</li>
+        <li>Escape: Close infobox or clear results</li>
+        <li>+ / - : Zoom map</li>
+        <li>? : Toggle this help</li>
+      </ul>
+      <button id="help-close" aria-label="Close help"><i class="material-symbols-outlined" aria-hidden="true">close</i></button>
+    </div>
+  </div>
+
+  <!-- Nudges -->
+  <div id="kb-nudge-overlay" class="hidden" role="dialog" aria-modal="true" aria-labelledby="kb-nudge-title">
+    <div class="help-content">
+      <button id="kb-nudge-close" aria-label="Close"><i class="material-symbols-outlined" aria-hidden="true">close</i></button>
+      <h3 id="kb-nudge-title">Pro tip: keyboard shortcuts</h3>
+      <p>You can navigate faster with the keyboard. Press ? to see all shortcuts.</p>
+      <label><input type="checkbox" id="kb-nudge-dont"> Don't remind me again</label>
+    </div>
+  </div>
+  <div id="nav-nudge-overlay" class="hidden" role="dialog" aria-modal="true" aria-labelledby="nav-nudge-title">
+    <div class="help-content">
+      <button id="nav-nudge-close" aria-label="Close"><i class="material-symbols-outlined" aria-hidden="true">close</i></button>
+      <h3 id="nav-nudge-title">Tip: Infobox Back/Next</h3>
+      <p>Use the ◀ ▶ buttons (or Left/Right keys) to browse previously viewed properties.</p>
+      <label><input type="checkbox" id="nav-nudge-dont"> Don't remind me again</label>
+    </div>
+  </div>
+
+  <div id="valuable-properties-panel" class="hidden">
+    <div id="valuable-properties-bar" role="toolbar" aria-label="Valuable properties controls">
+      <button id="valuable-properties-close" class="info-bar-btn info-bar-close" aria-label="Close" title="Close">
+        <i class="material-symbols-outlined" aria-hidden="true">close</i>
+      </button>
+    </div>
+    <h3 class="valuable-properties-title">Highest purchase prices</h3>
+    <div id="valuable-properties-list"></div>
+  </div>
+
+  <div id="intro-center-anchor" class="no-highlight-anchor"
+     style="position:fixed; top:50%; left:50%;
+            width:0; height:0; pointer-events:none;">
+  </div>
+
+  <div id="intro-center-top-anchor" class="no-highlight-anchor"
+     style="position:fixed; top:25%; left:50%;
+            width:0; height:0; pointer-events:none;">
+  </div>
+
+  <div id="intro-center-right-anchor" class="no-highlight-anchor"
+     style="position:fixed; top:50%; left:75%;
+            width:0; height:0; pointer-events:none;">
+  </div>
+
+  <!-- Live region for screen reader announcements -->
+  <div id="liveRegion" class="sr-only" aria-live="polite"></div>
+
+  <div id="footerVersion" style="position: fixed; z-index: 3000;bottom: 5px; right: 100px; color: grey; font-size: 10px;">
+    Webapp and data © Tax Policy Associates, 2026
+  </div>
+
+  <script src="config.js"></script>
+  <script src="ui.js"></script>
+  <script src="utils.js"></script>
+  <script src="map-utils.js"></script>
+  <script src="searching.js"></script>
+  <script src="data-service.js"></script>
+  <script src="map-service.js"></script>
+  <script src="startup.js"></script>
+  <script src="controller.js"></script>
+  <script src="info-panel.js"></script>
+  <script src="app.js"></script>
+  <script src="tutorial.js"></script>
+
+
+
+</body>
+</html>
