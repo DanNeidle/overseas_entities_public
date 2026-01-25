@@ -251,6 +251,8 @@ function showMobileTooltip(el, rawHtml) {
  * @param {string|null} [handleSelector=null] Optional selector for a handle inside the element.
  * @param {Object} [options={}] Optional behavior overrides.
  * @param {boolean} [options.suppressClick=false] Suppress the next click after a drag.
+ * @param {number} [options.longPressMs=0] Enable long-press drag on touch (ms).
+ * @param {number} [options.longPressMoveTolerance=6] Max move in px before cancelling long-press.
  * @returns {void}
  */
 function makeElementDraggable(elementOrId, handleSelector = null, options = {}) {
@@ -264,12 +266,18 @@ function makeElementDraggable(elementOrId, handleSelector = null, options = {}) 
 
     handle.style.cursor = 'grab';
 
-    const { suppressClick = false } = options;
+    const {
+        suppressClick = false,
+        longPressMs = 0,
+        longPressMoveTolerance = 6
+    } = options;
     let isDragging = false;
     let didDrag = false;
     let suppressClickUntil = 0;
     let offsetX, offsetY;
     let fixedCBRect = { left: 0, top: 0 }; // containing-block rect for fixed elements
+    let longPressTimer = null;
+    let longPressStart = null;
 
     // Find the nearest ancestor that will act as the containing block for position:fixed
     function getFixedContainingBlockRect(el) {
@@ -289,16 +297,23 @@ function makeElementDraggable(elementOrId, handleSelector = null, options = {}) 
         return { left: 0, top: 0 };
     }
 
+    function isIgnoredTarget(target) {
+        if (!target) return false;
+        const ignored = ['A', 'BUTTON', 'INPUT', 'I', 'TEXTAREA', 'SELECT', 'LABEL'];
+        if (ignored.includes(target.tagName)) return true;
+        return !!target.closest('a,button,input,textarea,select,label');
+    }
+
     function dragStart(e) {
-        const ignored = ['A', 'BUTTON', 'INPUT', 'I'];
-        if (ignored.includes(e.target.tagName) || e.target.closest('a,button,input')) return;
+        if (isIgnoredTarget(e.target)) return;
 
         isDragging = true;
         didDrag = false;
+        element.classList.add('is-dragging');
         handle.style.cursor = 'grabbing';
         element.style.zIndex = 4001;
-        if (typeof window.removeCustomHighlight === 'function') {
-            window.removeCustomHighlight();
+        if (window.TutorialService?.removeCustomHighlight) {
+            window.TutorialService.removeCustomHighlight();
         }
 
         const clientX = e.clientX ?? e.touches?.[0].clientX;
@@ -336,14 +351,16 @@ function makeElementDraggable(elementOrId, handleSelector = null, options = {}) 
 
     function dragEnd() {
         isDragging = false;
+        element.classList.remove('is-dragging');
         handle.style.cursor = 'grab';
         element.style.zIndex = '';
         if (suppressClick && didDrag) {
             suppressClickUntil = Date.now() + 450;
         }
-        if (didDrag && typeof window.addCustomHighlight === 'function' && window.currentTutorialHighlightTarget) {
+        const highlightTarget = window.TutorialService?.getCurrentHighlightTarget?.();
+        if (didDrag && highlightTarget && window.TutorialService?.addCustomHighlight) {
             requestAnimationFrame(() => {
-                window.addCustomHighlight(window.currentTutorialHighlightTarget);
+                window.TutorialService.addCustomHighlight(highlightTarget);
             });
         }
         document.removeEventListener('mousemove', dragMove);
@@ -361,8 +378,55 @@ function makeElementDraggable(elementOrId, handleSelector = null, options = {}) 
         handle.addEventListener('click', maybeSuppressClick, true);
     }
 
+    function clearLongPress() {
+        if (longPressTimer) {
+            clearTimeout(longPressTimer);
+            longPressTimer = null;
+        }
+        longPressStart = null;
+        document.removeEventListener('touchmove', onLongPressMove);
+        document.removeEventListener('touchend', clearLongPress);
+        document.removeEventListener('touchcancel', clearLongPress);
+    }
+
+    function onLongPressMove(e) {
+        if (!longPressTimer || !longPressStart) return;
+        const clientX = e.touches?.[0]?.clientX;
+        const clientY = e.touches?.[0]?.clientY;
+        if (!Number.isFinite(clientX) || !Number.isFinite(clientY)) return;
+        const dx = Math.abs(clientX - longPressStart.x);
+        const dy = Math.abs(clientY - longPressStart.y);
+        if (dx > longPressMoveTolerance || dy > longPressMoveTolerance) {
+            clearLongPress();
+        }
+    }
+
+    function onLongPressStart(e) {
+        if (!longPressMs) return;
+        if (!e.touches || e.touches.length !== 1) return;
+        if (handleSelector && e.target.closest(handleSelector)) return;
+        if (isIgnoredTarget(e.target)) return;
+
+        clearLongPress();
+        const clientX = e.touches[0].clientX;
+        const clientY = e.touches[0].clientY;
+        longPressStart = { x: clientX, y: clientY };
+
+        longPressTimer = setTimeout(() => {
+            clearLongPress();
+            dragStart(e);
+        }, longPressMs);
+
+        document.addEventListener('touchmove', onLongPressMove, { passive: true });
+        document.addEventListener('touchend', clearLongPress, { once: true });
+        document.addEventListener('touchcancel', clearLongPress, { once: true });
+    }
+
     handle.addEventListener('mousedown', dragStart);
     handle.addEventListener('touchstart', dragStart, { passive: true });
+    if (longPressMs) {
+        element.addEventListener('touchstart', onLongPressStart, { passive: true });
+    }
 }
 
 

@@ -105,7 +105,7 @@ Properties relate to Proprietors via a many-to-many relationship.
 - ui.js: UI rendering and helpers (panels, lists, focus mode, filters).
 - info-panel.js: Info panel markup, tooltips, history, highlight ring, export.
 - utils.js: General helpers (formatting, lookup, normalization).
-- tutorial.js: Intro.js tutorial flow and helper overlays.
+- tutorial.js: tutorial flow and helper overlays.
 - overseas_entities_map.css: App styling.
 
 ==============================================================================

@@ -301,7 +301,7 @@ function maybeStartTutorial() {
     if (STATE.TUTORIAL.STARTED || !STATE.TUTORIAL.PENDING) return;
     if (!STATE.TUTORIAL.DATA_READY) return;
 
-    if (typeof window.setupAndStartTutorial !== 'function') {
+    if (!window.TutorialService || typeof window.TutorialService.start !== 'function') {
         if (!STATE.TUTORIAL.START_RETRY_TIMER) {
             STATE.TUTORIAL.START_RETRY_TIMER = setTimeout(() => {
                 STATE.TUTORIAL.START_RETRY_TIMER = null;
@@ -313,7 +313,7 @@ function maybeStartTutorial() {
 
     STATE.TUTORIAL.STARTED = true;
     try {
-        setupAndStartTutorial();
+        window.TutorialService.start();
         setCookie(CONFIG.STORAGE.TUTORIAL_COOKIE_KEY, 'true', 365);
         STATE.TUTORIAL.PENDING = false;
     } catch (err) {
