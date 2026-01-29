@@ -644,6 +644,7 @@ def extract_data(current_db_file, output_json_path):
     trustee_with_bo_property_titles = collections.defaultdict(set)
     trustee_display_names: dict[str, str] = {}
     skipped_ceased_bos = 0
+    self_owning_proprietors: dict[str, str] = {}
     
     print("Now processing database")
     for index, database_row in enumerate(rows):
@@ -816,6 +817,10 @@ def extract_data(current_db_file, output_json_path):
                             skipped_ceased_bos += 1
                             continue
                         active_bos_count += 1
+                        if bo_name.strip().lower() == pname.strip().lower():
+                            key = pname.strip().lower()
+                            if key not in self_owning_proprietors:
+                                self_owning_proprietors[key] = pname
                         
                         bo_address = row.get(f"proprietor{p}_BO{bo}_address")
                         bo_lat, bo_lon = parse_latlon(row.get(f"proprietor{p}_BO{bo}_latlon"))
@@ -1296,6 +1301,13 @@ def extract_data(current_db_file, output_json_path):
 
     if skipped_ceased_bos > 0:
         print(f"Skipped ceased beneficial owners during export: {skipped_ceased_bos}")
+
+    if self_owning_proprietors:
+        print("Self-owning companies found (proprietor listed as their own BO):")
+        for name in sorted(self_owning_proprietors.values(), key=str.lower):
+            print(f" - {name}")
+    else:
+        print("No self-owning companies found")
 
 
 if __name__ == "__main__":
