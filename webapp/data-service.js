@@ -198,72 +198,67 @@ function loadBinary(url, onProgress) {
     });
 }
 
-function fetchManifest(defaultTotalBytes, options = {}) {
+async function fetchManifest(defaultTotalBytes, options = {}) {
     const {
         manifestUrl = 'overseas_entities_data_info.txt',
         propertiesUrl = 'overseas_entities_properties.msgpack',
         proprietorsUrl = 'overseas_entities_proprietors.msgpack',
     } = options;
 
-    return new Promise((resolve) => {
-        $.ajax({
-            url: manifestUrl,
-            dataType: 'text',
-            cache: false,
-            success: function(txt){
-                const lines = (txt || '').split(/\r?\n/).map(s => s.trim()).filter(Boolean);
-                let dataHash = null;
-                let totalBytes = defaultTotalBytes;
-                let datasetVersionLabel = null;
-                let propsUrl = propertiesUrl;
-                let propsBase = propertiesUrl.replace(/\.msgpack$/i, '');
-                let ownersUrl = proprietorsUrl;
-                let ownersBase = proprietorsUrl.replace(/\.msgpack$/i, '');
+    try {
+        const response = await fetch(manifestUrl, { cache: 'no-store' });
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        const txt = await response.text();
+        const lines = (txt || '').split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+        let dataHash = null;
+        let totalBytes = defaultTotalBytes;
+        let datasetVersionLabel = null;
+        let propsUrl = propertiesUrl;
+        const propsBase = propertiesUrl.replace(/\.msgpack$/i, '');
+        let ownersUrl = proprietorsUrl;
+        const ownersBase = proprietorsUrl.replace(/\.msgpack$/i, '');
 
-                if (lines.length >= 2) {
-                    const size = parseInt(lines[0], 10);
-                    const hash = lines[1];
-                    if (!isNaN(size) && size > 0) totalBytes = size;
-                    if (hash && /^[a-f0-9]{8}$/i.test(hash)) {
-                        dataHash = hash;
-                        propsUrl = propsBase === propertiesUrl ? propertiesUrl : `${propsBase}.${hash}.msgpack`;
-                        ownersUrl = ownersBase === proprietorsUrl ? proprietorsUrl : `${ownersBase}.${hash}.msgpack`;
-                    }
-                }
-                if (lines.length >= 3 && lines[2]) {
-                    datasetVersionLabel = lines[2];
-                }
-                resolve({
-                    dataHash,
-                    totalBytes,
-                    datasetVersionLabel,
-                    propertiesUrl: propsUrl,
-                    proprietorsUrl: ownersUrl,
-                    usedFallback: false,
-                });
-            },
-            error: function(){
-                resolve({
-                    dataHash: null,
-                    totalBytes: defaultTotalBytes,
-                    datasetVersionLabel: null,
-                    propertiesUrl: propertiesUrl,
-                    proprietorsUrl: proprietorsUrl,
-                    usedFallback: true,
-                });
+        if (lines.length >= 2) {
+            const size = parseInt(lines[0], 10);
+            const hash = lines[1];
+            if (!isNaN(size) && size > 0) totalBytes = size;
+            if (hash && /^[a-f0-9]{8}$/i.test(hash)) {
+                dataHash = hash;
+                propsUrl = propsBase === propertiesUrl ? propertiesUrl : `${propsBase}.${hash}.msgpack`;
+                ownersUrl = ownersBase === proprietorsUrl ? proprietorsUrl : `${ownersBase}.${hash}.msgpack`;
             }
-        });
-    });
+        }
+        if (lines.length >= 3 && lines[2]) {
+            datasetVersionLabel = lines[2];
+        }
+        return {
+            dataHash,
+            totalBytes,
+            datasetVersionLabel,
+            propertiesUrl: propsUrl,
+            proprietorsUrl: ownersUrl,
+            usedFallback: false,
+        };
+    } catch {
+        return {
+            dataHash: null,
+            totalBytes: defaultTotalBytes,
+            datasetVersionLabel: null,
+            propertiesUrl: propertiesUrl,
+            proprietorsUrl: proprietorsUrl,
+            usedFallback: true,
+        };
+    }
 }
 
-function loadControlTypes(url) {
-    return new Promise((resolve, reject) => {
-        $.getJSON(url, function(mapData) {
-            resolve(mapData);
-        }).fail(function(err) {
-            reject(err);
-        });
-    });
+async function loadControlTypes(url) {
+    const response = await fetch(url, { cache: 'no-store' });
+    if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+    }
+    return response.json();
 }
 
 function canUseLocalForage() {

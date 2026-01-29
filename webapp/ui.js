@@ -633,7 +633,11 @@ function panToLocation(lat, lon, color, title, event, propertyTitleNumber, origi
 
         if (targetMarker && matchesTarget && targetLayerGroup && targetLayerGroup.hasLayer(targetMarker)) {
             const z = (typeof zoomLevel === 'number' && !isNaN(zoomLevel)) ? zoomLevel : undefined;
-            focusMarkerOnMap(targetMarker, { zoom: z });
+            if (Number.isFinite(z)) {
+                map.flyTo(targetLatLng, z, { duration: getFlyDuration() });
+            } else {
+                map.panTo(targetLatLng);
+            }
             return;
         }
 

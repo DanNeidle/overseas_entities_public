@@ -115,7 +115,6 @@ Properties relate to Proprietors via a many-to-many relationship.
 2. MessagePack (@msgpack/msgpack): High-performance binary deserialization.
 3. LocalForage: IndexedDB wrapper for cached datasets.
 4. LZ-String: URL compression for the share-state feature.
-5. jQuery: AJAX helpers and small utilities.
 
 ==============================================================================
 6. FILE MANIFEST (SERVER SIDE)

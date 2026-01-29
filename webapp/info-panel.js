@@ -197,6 +197,19 @@ function createCompaniesHouseSearchIcon(name, companyNumber) {
     `;
 }
 
+function createCompaniesHouseUkSearchIcon(name) {
+    if (!name) return '';
+    const encoded = encodeURIComponent(String(name).trim()).replace(/%20/g, '+');
+    const url = `https://find-and-update.company-information.service.gov.uk/search?q=${encoded}`;
+    const tooltipText = 'Companies House search';
+    const ariaLabel = 'Companies House search';
+    return `
+        <a href="${url}" target="_blank" rel="noopener noreferrer" class="search-icon" data-tooltip-infopanel="${tooltipText}" aria-label="${ariaLabel}" data-stop-propagation="true">
+            <i class="material-symbols-outlined" aria-hidden="true">factory</i>
+        </a>
+    `;
+}
+
 function truncateWithTooltip(str, limit) {
     // Use the custom data attribute instead of the native `title` attribute
     // for a consistent look and feel with the rest of the application's tooltips.
@@ -555,6 +568,8 @@ const PanelRenderer = {
     renderBeneficialOwner: (bo, index, totalBOs, prop, itemTitle, markerId) => {
         const label = totalBOs > 1 ? `Beneficial owner ${index + 1}` : 'Beneficial owner';
         const boCountBadge = createOwnershipCountBadge(bo.name, 'beneficiary', bo.count);
+        const isUkCompany = String(bo.reg_status || '').trim().toLowerCase() === 'uk';
+        const ukCompanyIcon = isUkCompany ? createCompaniesHouseUkSearchIcon(bo.name) : '';
         const boMapIcon = createFlyThereIcon(
             bo.lat,
             bo.lon,
@@ -565,7 +580,8 @@ const PanelRenderer = {
         const addressTooltip = `"${bo.address || 'No address'}": copy to clipboard`;
         const badges = [
             (!prop.excluded && bo.reg_status === 'suspect' && !prop.has_individual_non_trustee) ? PanelRenderer.renderBadge('suspect') : '',
-            (!prop.excluded && bo.sanctioned) ? PanelRenderer.renderBadge('sanctioned') : ''
+            (!prop.excluded && bo.sanctioned) ? PanelRenderer.renderBadge('sanctioned') : '',
+            (isUkCompany) ? PanelRenderer.renderBadge('UK') : ''
         ].join('');
 
         return `
@@ -576,6 +592,7 @@ const PanelRenderer = {
                         <span class="entity-name">
                             <span class="copyable-text" data-tooltip-infopanel="Click to copy name">${escapeHtml(bo.name)}</span>
                             ${boCountBadge}
+                            ${ukCompanyIcon}
                             ${boMapIcon}
                             ${createGoogleSearchIcon(bo.name)}
                             ${createGoogleMapIcon(bo.address)}

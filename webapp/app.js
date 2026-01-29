@@ -12,7 +12,6 @@
  * - Provide search, selection, share links, and accessibility affordances
  *
  * Third‑party libraries:
- * - jQuery (MIT)
  * - Leaflet (BSD 2‑Clause)
  * - Leaflet.markercluster (MIT)
  * - Leaflet.Control.Geocoder (MIT)
@@ -130,4 +129,3 @@ const App = {
 document.addEventListener('DOMContentLoaded', () => {
     App.init();
 });
-

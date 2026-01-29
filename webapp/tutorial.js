@@ -4,7 +4,6 @@
  * We’d appreciate it if you let us know, but you don't have to.
  *
  * This script defines the interactive tutorial for the Overseas Entities map.
- * It uses the Intro.js library to guide users through the features of the webapp.
  */
 
 (() => {
@@ -17,6 +16,22 @@ const setCurrentHighlightTarget = (target) => {
 };
 const clearCurrentHighlightTarget = () => {
   currentHighlightTarget = null;
+};
+const ensureModeActive = (mode) => {
+  const btn = document.querySelector(`.mode-toggle-btn[data-value="${mode}"]`);
+  if (btn && !btn.classList.contains('active')) {
+    btn.click();
+  }
+};
+const ensureMobileMenuOpen = async () => {
+  if (isMobile()) {
+    await showHamburger();
+  }
+};
+const ensureMobileMenuClosed = () => {
+  if (isMobile()) {
+    dismissHamburger();
+  }
 };
 
 /**
@@ -379,7 +394,12 @@ const TutorialService = {
             title: 'Property Mode',
             intro: 'We start off in <strong>property mode</strong>, showing the location of properties owned by "overseas entities".<br><br>NB you can grab these tutorial windows by clicking the title at the top, and then drag them around if you want to see what\'s underneath them.',
             highlightTarget: '.mode-toggle-btn[data-value="properties"]',
-            position: 'floating'
+            position: 'bottom',
+            onEnter: () => {
+                if (isMobile()) {
+                    showHamburger();
+                }
+            },
         },
         {
             id: 'property', 
@@ -712,24 +732,33 @@ const TutorialService = {
             id: 'infobox-final',
             title: 'The Info Box',
             intro: 'That\'s all the information in the infobox. The app remembers previous properties you\'ve viewed, and you can go back and forth between them using the two navigation arrows. Or close the Info Box by clicking the \'x\'',
-            highlightTarget: '#info-panel-bar'
+            highlightTarget: '#info-panel-bar',
+            onEnter: () => {
+                toggleLegendItems(['red', 'orange', 'grey', 'purple']);
+            }
         },
 
 
         // Tutorial step: Proprietors
         {
-            id: 'proprietors',
+            id: 'proprietors1',
             title: 'Proprietor mode',
-            intro: 'This has all been in the <strong>property</strong> view. But we can also look at the location of <strong>proprietors</strong> - the people whose names are on the land registry as legally owning the property.',
+            intro: 'This has all been in the <strong>property</strong> view. But we can also go into <strong>proprietor</strong> mode...',
             highlightTarget: '.mode-toggle-btn[data-value="proprietors"]',
-            onEnter: () => {
-                toggleLegendItems(['red', 'orange', 'grey', 'purple']);
-                document.querySelector('#floatingClearButton')?.click();
+            onEnter: async () => {
                 UIService.hidePanel();
+                await ensureMobileMenuOpen();
             },
+            position: 'floating'
+
+        },
+        {
+            id: 'proprietors2',
+            title: 'Proprietor mode',
+            intro: 'This shows us the location of <strong>proprietors</strong> - the people whose names are on the land registry as legally owning the property.',
             onLeave: async () => {
                 await sleep(1000);
-                document.querySelector('.mode-toggle-btn[data-value="proprietors"]')?.click();
+                ensureModeActive('proprietors');
             },
             position: 'floating'
 
@@ -740,9 +769,12 @@ const TutorialService = {
             title: 'Beneficial owner mode',
             intro: '...or <strong>beneficial owners</strong> - the people who really own the properties',
             highlightTarget: '.mode-toggle-btn[data-value="beneficial_owners"]',
+            onEnter: async () => {
+                await ensureMobileMenuOpen();
+            },
             onLeave: async () => {
                 await sleep(1000);
-                document.querySelector('.mode-toggle-btn[data-value="beneficial_owners"]')?.click();
+                ensureModeActive('beneficial_owners');
             },
             position: 'floating'
         },
@@ -754,6 +786,9 @@ const TutorialService = {
             intro: '... which can let us see all the beneficial owners in (for example) Panama.',
             highlightTarget: '.mode-toggle-btn[data-value="beneficial_owners"]',
             onEnter: async () => {
+                await ensureMobileMenuOpen();
+                ensureModeActive('beneficial_owners');
+                await sleep(200);
                 map.flyTo([8.97868, -79.528484], 14);
             }
         },
@@ -766,6 +801,9 @@ const TutorialService = {
             intro: 'If you click again on the mode you\'re already in, the view will reset (but will remember your history)',
             highlightTarget: '.mode-toggle-btn[data-value="beneficial_owners"]',
             onLeave: async () => {
+                if (isMobile()) {
+                    showHamburger();
+                }
                 await sleep(1000);
                 document.querySelector('.mode-toggle-btn[data-value="beneficial_owners"]')?.click();
             },
@@ -778,6 +816,9 @@ const TutorialService = {
             title: 'The most £',
             intro: 'Click here to bring up a list of the properties with the highest listed purchase price - then click on each to explore their details.',
             highlightTarget: '#showValuableButton',
+            onEnter: async () => {
+                await ensureMobileMenuOpen();
+            },
             onLeave: async () => {
                 document.querySelector('.mode-toggle-btn[data-value="properties"]')?.click();
                 await sleep(1000);
@@ -792,6 +833,9 @@ const TutorialService = {
             title: 'Counting',
             intro: 'Other features: click here to draw a rectangle in the map, which counts the number of markers in the rectangle.',
             highlightTarget: '#selectAreaButton',
+            onEnter: async () => {
+                await ensureMobileMenuOpen();
+            },
             onLeave: () => {
                 toggleValuablePropertiesPanel();
             },
@@ -803,7 +847,10 @@ const TutorialService = {
             title: 'What\'s near me?',
             intro: 'Or click here to pan and zoom to your current location.',
             highlightTarget: '#goToLocationButton',
-            position: 'floating'
+            position: 'floating',
+            onEnter: () => {
+                ensureMobileMenuClosed();
+            }
         },
 
         // Tutorial step: share
@@ -812,6 +859,9 @@ const TutorialService = {
             title: 'Sharing',
             intro: 'If you find something interesting, click here to generate a unique link (copied to clipboard) that you can share with others. If they click that url, they\'ll go to the exact same view that you found.',
             highlightTarget: '#shareViewButton',
+            onEnter: async () => {
+                await ensureMobileMenuOpen();
+            },
             position: 'floating'
         },
 
@@ -821,6 +871,9 @@ const TutorialService = {
             title: 'Resetting the view',
             intro: 'And you can reset the map view completely by clicking here (but the history of properties you viewed will remain stored locally)',
             highlightTarget: '#clearButton',
+            onEnter: async () => {
+                await ensureMobileMenuOpen();
+            },
             position: 'floating'
         },
 
@@ -839,6 +892,9 @@ const TutorialService = {
             title: 'Thank you!',
             intro: 'Thanks for watching this tutorial.<br><br>You can re-run the tutorial at any time.',
             highlightTarget: '#reRunTutorialButton',
+            onEnter: async () => {
+                await ensureMobileMenuOpen();
+            },
             position: 'floating'
         },
 
@@ -865,9 +921,6 @@ const TutorialService = {
         showHamburger(); 
         // ------------------------------------
 
-        // Ensure UI is ready
-        if (isMobile()) dismissHamburger();
-        
         // Render the container once
         this._createWindow();
 

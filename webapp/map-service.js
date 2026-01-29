@@ -157,6 +157,7 @@ const MapService = {
     modeLayersFiltered,
     modeLayers,
     init() {
+        this.setupResizeObserver();
         return this.map;
     },
     setModeLayers(nextLayers) {
@@ -189,6 +190,15 @@ const MapService = {
         if (layerGroup && this.map && this.map.hasLayer(layerGroup)) {
             this.map.removeLayer(layerGroup);
         }
+    },
+    setupResizeObserver() {
+        if (this._resizeObserver || typeof ResizeObserver === 'undefined') return;
+        const container = this.map?.getContainer?.();
+        if (!container) return;
+        this._resizeObserver = new ResizeObserver(() => {
+            this.forceResize();
+        });
+        this._resizeObserver.observe(container);
     },
 };
 
@@ -380,13 +390,13 @@ MapService.setMode = function(newMode, dont_change_view = false) {
 
 MapService.switchMode = MapService.setMode;
 
-// Repeatedly invalidate size to ensure the map positions correctly on mobile
-// This is a horrible hack which we really should replace at some point with a ResizeObserver or a single requestAnimationFrame.
+// Coalesce resize invalidations into a single frame.
 MapService.forceResize = function() {
-    map.invalidateSize();
-    setTimeout(() => map.invalidateSize(), 200);
-    setTimeout(() => map.invalidateSize(), 400);
-    setTimeout(() => map.invalidateSize(), 600);
+    if (MapService._resizeRaf) return;
+    MapService._resizeRaf = requestAnimationFrame(() => {
+        MapService._resizeRaf = null;
+        map.invalidateSize();
+    });
 };
 
 MapService.buildPropertyMarkers = function() {

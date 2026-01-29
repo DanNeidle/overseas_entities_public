@@ -430,75 +430,106 @@ AppController.bindShareEvents = function() {
 
 // Searching for places (Nominatim) with auto-search
 AppController.bindPlaceSearchEvents = function() {
-    const placeInput = $('#placeSearchInput');
-    if (!placeInput.length) return;
-    placeInput.on('keyup', debounce(function() {
-        const searchText = $(this).val().trim();
-        const resultsDiv = $('#placeSearchResults');
+    const placeInput = document.getElementById('placeSearchInput');
+    if (!placeInput) return;
+    placeInput.addEventListener('keyup', debounce(async function() {
+        const searchText = this.value.trim();
+        const resultsDiv = document.getElementById('placeSearchResults');
+        if (!resultsDiv) return;
 
         // Hide results if search is empty or too short
         if (searchText.length < 2) {
-            resultsDiv.empty().hide();
+            resultsDiv.innerHTML = '';
+            resultsDiv.style.display = 'none';
             return;
         }
 
-        // Make a JSONP request to Nominatim
-        $.ajax({
-            url: CONFIG.URLS.NOMINATIM_SEARCH,
-            dataType: "jsonp",
-            jsonp: "json_callback",
-            data: {
-                q: searchText,
-                format: "json",
-                limit: 30,
-                addressdetails: 1
-            },
-            success: function(results) {
-                resultsDiv.empty(); // Clear previous results
-                // Add a results header with inline clear badge
-                const $header = $('<div class="results-header"></div>');
-                $header.append($('<span class="results-title"></span>').text('Results'));
-                const $clear = $('<button type="button" class="results-clear">Clear</button>');
-                $clear.on('click', function(e){ e.stopPropagation(); resultsDiv.empty().hide(); });
-                $header.append($clear);
-                resultsDiv.append($header);
+        const url = new URL(CONFIG.URLS.NOMINATIM_SEARCH);
+        url.search = new URLSearchParams({
+            q: searchText,
+            format: 'json',
+            limit: '30',
+            addressdetails: '1',
+        }).toString();
 
-                if (!results || results.length === 0) {
-                    resultsDiv
-                      .append($('<div class="result-item" role="option" tabindex="0"></div>').text('No results found.'))
-                      .show();
-                    const live = document.getElementById('liveRegion');
-                    if (live) live.textContent = 'No results';
-                    return;
-                }
-
-                // Create a dropdown list of results
-                results.forEach(function(result) {
-                    const resultItem = $('<div class="result-item" role="option" tabindex="0"></div>').text(result.display_name);
-                    resultItem.on('click', function() {
-                        focusMapOnPlaceResult(result);
-                        // Keep results visible; just set the input to the selected place
-                        $('#placeSearchInput').val(result.display_name);
-
-                        // Highlight the selected item
-                        resultsDiv.children().removeClass('selected');
-                        resultItem.addClass('selected');
-                    });
-                    // Keyboard activation
-                    resultItem.on('keydown', function(e){ if (e.key === 'Enter') $(this).trigger('click'); });
-                    resultsDiv.append(resultItem);
-                });
-                resultsDiv.show(); // Show results container
-                const live = document.getElementById('liveRegion');
-                if (live) live.textContent = `${results.length} results`;
-            },
-            error: function(xhr, status, error) {
-                resultsDiv.empty().append($('<div class="result-item" role="option" tabindex="0"></div>').text('Error retrieving results.')).show();
-                const live = document.getElementById('liveRegion');
-                if (live) live.textContent = 'Error retrieving results';
-                // console.error("Geocoding error:", status, error);
+        try {
+            const response = await fetch(url.toString(), {
+                headers: { 'Accept': 'application/json' },
+            });
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
             }
-        });
+            const results = await response.json();
+
+            resultsDiv.innerHTML = ''; // Clear previous results
+            // Add a results header with inline clear badge
+            const header = document.createElement('div');
+            header.className = 'results-header';
+            const title = document.createElement('span');
+            title.className = 'results-title';
+            title.textContent = 'Results';
+            const clearBtn = document.createElement('button');
+            clearBtn.type = 'button';
+            clearBtn.className = 'results-clear';
+            clearBtn.textContent = 'Clear';
+            clearBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                resultsDiv.innerHTML = '';
+                resultsDiv.style.display = 'none';
+            });
+            header.appendChild(title);
+            header.appendChild(clearBtn);
+            resultsDiv.appendChild(header);
+
+            if (!Array.isArray(results) || results.length === 0) {
+                const emptyItem = document.createElement('div');
+                emptyItem.className = 'result-item';
+                emptyItem.setAttribute('role', 'option');
+                emptyItem.setAttribute('tabindex', '0');
+                emptyItem.textContent = 'No results found.';
+                resultsDiv.appendChild(emptyItem);
+                resultsDiv.style.display = 'block';
+                const live = document.getElementById('liveRegion');
+                if (live) live.textContent = 'No results';
+                return;
+            }
+
+            // Create a dropdown list of results
+            results.forEach((result) => {
+                const resultItem = document.createElement('div');
+                resultItem.className = 'result-item';
+                resultItem.setAttribute('role', 'option');
+                resultItem.setAttribute('tabindex', '0');
+                resultItem.textContent = result.display_name;
+                resultItem.addEventListener('click', () => {
+                    focusMapOnPlaceResult(result);
+                    // Keep results visible; just set the input to the selected place
+                    placeInput.value = result.display_name;
+
+                    // Highlight the selected item
+                    Array.from(resultsDiv.children).forEach(el => el.classList.remove('selected'));
+                    resultItem.classList.add('selected');
+                });
+                // Keyboard activation
+                resultItem.addEventListener('keydown', (e) => { if (e.key === 'Enter') resultItem.click(); });
+                resultsDiv.appendChild(resultItem);
+            });
+            resultsDiv.style.display = 'block'; // Show results container
+            const live = document.getElementById('liveRegion');
+            if (live) live.textContent = `${results.length} results`;
+        } catch (err) {
+            resultsDiv.innerHTML = '';
+            const errorItem = document.createElement('div');
+            errorItem.className = 'result-item';
+            errorItem.setAttribute('role', 'option');
+            errorItem.setAttribute('tabindex', '0');
+            errorItem.textContent = 'Error retrieving results.';
+            resultsDiv.appendChild(errorItem);
+            resultsDiv.style.display = 'block';
+            const live = document.getElementById('liveRegion');
+            if (live) live.textContent = 'Error retrieving results';
+            // console.error("Geocoding error:", err);
+        }
     }, CONFIG.INTERACTION.DEBOUNCE_MS.PLACE_SEARCH)); // A 350ms delay is polite for an external API
 }
 
@@ -595,24 +626,30 @@ AppController.attachInfoPanelActionHandlersOnce = function() {
 
 // Draw connections when "Show connections" button in the info panel is clicked
 AppController.bindPanelLinkEvents = function() {
-    $(document).on("click", ".show-link", function(e) {
+    document.addEventListener('click', (e) => {
+        const link = e.target.closest('.show-link');
+        if (!link) return;
         L.DomEvent.stopPropagation(e); // Good practice to stop the click from propagating
-        const markerId = $(this).data("markerid");
+        const markerId = link.getAttribute('data-markerid');
         drawLinksFromMarkerId(markerId);
     });
 }
 
 // Reset view button
 AppController.bindResetViewEvents = function() {
-    $(document).on("click", "#clearButton", function() {
-        triggerHapticFeedback(this);
+    document.addEventListener('click', (e) => {
+        const clearButton = e.target.closest('#clearButton');
+        if (!clearButton) return;
+        triggerHapticFeedback(clearButton);
         resetViewToCleanUrl();
     });
 }
 
 // Draw Selection button and logic
 AppController.bindSelectionEvents = function() {
-    $(document).on("click", "#selectAreaButton", function() {
+    document.addEventListener('click', (e) => {
+        const selectButton = e.target.closest('#selectAreaButton');
+        if (!selectButton) return;
         // Create and add Draw Control
         let drawControl = new L.Control.Draw({
             draw: {
@@ -681,7 +718,7 @@ AppController.initUiControls = function() {
         });
     }
 
-    makeElementDraggable('info-panel');
+    makeElementDraggable('info-panel', '#info-panel-bar', { longPressMs: 320 });
     
     if (!isMobile()) {
         makeElementDraggable('legendBox');
@@ -725,7 +762,7 @@ AppController.ensureLiveRegion = function() {
 }
 
 AppController.bindOffcanvasEvents = function() {
-    var offcanvas = document.getElementById('mobileControlsOffcanvas');
+    const offcanvas = document.getElementById('mobileControlsOffcanvas');
     if (offcanvas) {
         offcanvas.addEventListener('show.bs.offcanvas', function() {
             // Disable map interactions while menu open

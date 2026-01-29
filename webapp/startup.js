@@ -4,6 +4,18 @@
  * Apply legend defaults early when restoring from a ?location link.
  * @returns {void}
  */
+function fadeOutElement(el, duration = 200) {
+    if (!el) return;
+    el.style.opacity = '1';
+    el.style.transition = `opacity ${duration}ms ease`;
+    requestAnimationFrame(() => {
+        el.style.opacity = '0';
+    });
+    window.setTimeout(() => {
+        el.style.display = 'none';
+    }, duration);
+}
+
 function applyLegendDefaultsForLocationRestore() {
     const params = new URLSearchParams(window.location.search);
     if (!params.has('location')) return;
@@ -36,6 +48,7 @@ function initializeDataLoad() {
     // Get references to the loading UI elements
     const progressBar = document.getElementById('progressBar');
     const loadingText = document.getElementById('loading-text');
+    const loadingOverlay = document.getElementById('loading-overlay');
     // Track cumulative download progress across both data files
     let bytesProps = 0;
     let bytesOwners = 0;
@@ -182,7 +195,7 @@ function initializeDataLoad() {
             STATE.URL.SUPPRESS_UPDATES = false;
         }
 
-        $('#loading-overlay').fadeOut();
+        fadeOutElement(loadingOverlay);
     };
 
     DataService.loadAll({
@@ -251,21 +264,27 @@ function initializeDataLoad() {
             finalizeStartup();
         },
         onProprietorsError: () => {
-            $('#loading-overlay').fadeOut();
+            fadeOutElement(loadingOverlay);
         },
     }).catch((err) => {
         const showError = (titleHtml) => {
-            $('#loading-overlay').html(
+            if (!loadingOverlay) return;
+            loadingOverlay.style.display = 'flex';
+            loadingOverlay.style.opacity = '1';
+            loadingOverlay.style.transition = '';
+            loadingOverlay.innerHTML =
                 '<div style="text-align:left">'
                 + titleHtml
                 + '<p>Please try refreshing. If that doesn\'t work, this may be a caching issue.</p>'
                 + '<button id="clear-app-data-btn" class="btn btn-sm btn-outline-danger">Clear app data and reload</button>'
-                + '</div>'
-            );
-            $('#clear-app-data-btn').on('click', function(){
-                $('#loading-overlay').html('<p>Clearing cached app data…</p>');
-                clearAppDataAndReload();
-            });
+                + '</div>';
+            const clearBtn = loadingOverlay.querySelector('#clear-app-data-btn');
+            if (clearBtn) {
+                clearBtn.addEventListener('click', () => {
+                    loadingOverlay.innerHTML = '<p>Clearing cached app data…</p>';
+                    clearAppDataAndReload();
+                }, { once: true });
+            }
         };
 
         if (err && err.stage === 'control-types') {
